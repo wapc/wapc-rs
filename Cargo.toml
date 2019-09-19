@@ -1,0 +1,24 @@
+[package]
+name = "wapc-guest"
+version = "0.1.0"
+authors = ["Waxosuit Team <alothien@gmail.com>"]
+edition = "2018"
+description = "Guest SDK for building waPC-compliant WebAssembly Modules"
+license = "Apache-2.0"
+homepage = "https://wascap.io/comms/"
+documentation = "https://docs.rs/wapc-guest"
+readme = "README.md"
+keywords = ["sdk", "wapc", "webassembly", "wasm", "waxosuit"]
+categories = ["wasm", "api-bindings"]
+
+[badges]
+travis-ci = { repository = "wapc/wapc-guest-rust", branch = "master" }
+
+[dependencies]
+wascap-codec = "0.1.1"
+#wascap-codec = { path = "../wascap-codec" }
+prost = "0.5.0"
+serde_json = "1.0.40"
+serde_derive = "1.0.101"
+serde = "1.0.101"
+prost-types = "0.5.0"
