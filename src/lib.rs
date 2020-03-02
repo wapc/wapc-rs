@@ -37,7 +37,7 @@
 //!
 //! fn hello_world(
 //!    _msg: &[u8]) -> CallResult {
-//!    let _res = host_call("sample:Host!Call", b"hello")?;
+//!    let _res = host_call("sample:Host", "Call", b"hello")?;
 //!     Ok(vec![])
 //! }
 //! ```
@@ -48,7 +48,7 @@ pub type Result<T> = std::result::Result<T, errors::Error>;
 #[link(wasm_import_module = "wapc")]
 extern "C" {
     pub fn __console_log(ptr: *const u8, len: usize);
-    pub fn __host_call(op_ptr: *const u8, op_len: usize, ptr: *const u8, len: usize) -> usize;
+    pub fn __host_call(ns_ptr: *const u8, ns_len: usize, op_ptr: *const u8, op_len: usize, ptr: *const u8, len: usize) -> usize;
     pub fn __host_response(ptr: *const u8);
     pub fn __host_response_len() -> usize;
     pub fn __host_error_len() -> usize;
@@ -60,10 +60,10 @@ extern "C" {
 
 
 /// The function through which all host calls take place. 
-pub fn host_call(op: &str, msg: &[u8]) -> Result<Vec<u8>> {
+pub fn host_call(ns: &str, op: &str, msg: &[u8]) -> Result<Vec<u8>> {
     
     let callresult = unsafe {
-        __host_call(op.as_ptr(), op.len() as _, msg.as_ptr(), msg.len() as _)            
+        __host_call(ns.as_ptr() as _, ns.len() as _, op.as_ptr() as _, op.len() as _, msg.as_ptr() as _, msg.len() as _)            
     };
     if callresult != 1 { // call was not successful
         let errlen = unsafe { __host_error_len() };
