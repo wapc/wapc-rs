@@ -112,11 +112,7 @@ macro_rules! wapc_handler {
             };
 
             let opstr = ::std::str::from_utf8(op).unwrap();            
-
-            console_log(&format!(
-                "Performing guest call, operation - {}",
-                opstr                
-            ));
+            
             match $user_handler(&opstr, slice) {
                 Ok(msg) => unsafe {
                     $crate::__guest_response(msg.as_ptr(), msg.len() as _);
