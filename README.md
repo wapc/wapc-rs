@@ -26,7 +26,7 @@ pub fn handle_wapc(operation: &str, msg: &[u8]) -> CallResult {
 
 fn hello_world(
    _msg: &[u8]) -> CallResult {
-   let _res = host_call("sample:Host", "Call", b"hello")?;
+   let _res = host_call("myBinding", "sample:Host", "Call", b"hello")?;
     Ok(vec![])
 }
 ```

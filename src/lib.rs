@@ -18,7 +18,7 @@
 //! [waPC](https://wascap.io/comms)-compliant host runtime. Each guest module has a single
 //! call handler, declared with the `wapc_handler!` macro. Inside this call handler, the guest
 //! module should check the operation of the delivered message and handle it accordingly,
-//! returning any binary payload in response. 
+//! returning any binary payload in response.
 //!
 //! # Example
 //! ```
@@ -37,7 +37,7 @@
 //!
 //! fn hello_world(
 //!    _msg: &[u8]) -> CallResult {
-//!    let _res = host_call("sample:Host", "Call", b"hello")?;
+//!    let _res = host_call("myBinding", "sample:Host", "Call", b"hello")?;
 //!     Ok(vec![])
 //! }
 //! ```
@@ -48,24 +48,41 @@ pub type Result<T> = std::result::Result<T, errors::Error>;
 #[link(wasm_import_module = "wapc")]
 extern "C" {
     pub fn __console_log(ptr: *const u8, len: usize);
-    pub fn __host_call(ns_ptr: *const u8, ns_len: usize, op_ptr: *const u8, op_len: usize, ptr: *const u8, len: usize) -> usize;
+    pub fn __host_call(
+        bd_ptr: *const u8,
+        bd_len: usize,
+        ns_ptr: *const u8,
+        ns_len: usize,
+        op_ptr: *const u8,
+        op_len: usize,
+        ptr: *const u8,
+        len: usize,
+    ) -> usize;
     pub fn __host_response(ptr: *const u8);
     pub fn __host_response_len() -> usize;
     pub fn __host_error_len() -> usize;
     pub fn __host_error(ptr: *const u8);
     pub fn __guest_response(ptr: *const u8, len: usize);
-    pub fn __guest_error(ptr: *const u8, len: usize);    
+    pub fn __guest_error(ptr: *const u8, len: usize);
     pub fn __guest_request(op_ptr: *const u8, ptr: *const u8);
 }
 
-
-/// The function through which all host calls take place. 
-pub fn host_call(ns: &str, op: &str, msg: &[u8]) -> Result<Vec<u8>> {
-    
+/// The function through which all host calls take place.
+pub fn host_call(binding: &str, ns: &str, op: &str, msg: &[u8]) -> Result<Vec<u8>> {
     let callresult = unsafe {
-        __host_call(ns.as_ptr() as _, ns.len() as _, op.as_ptr() as _, op.len() as _, msg.as_ptr() as _, msg.len() as _)            
+        __host_call(
+            binding.as_ptr() as _,
+            binding.len() as _,
+            ns.as_ptr() as _,
+            ns.len() as _,
+            op.as_ptr() as _,
+            op.len() as _,
+            msg.as_ptr() as _,
+            msg.len() as _,
+        )
     };
-    if callresult != 1 { // call was not successful
+    if callresult != 1 {
+        // call was not successful
         let errlen = unsafe { __host_error_len() };
         let buf = Vec::with_capacity(errlen as _);
         let retptr = buf.as_ptr();
@@ -76,7 +93,8 @@ pub fn host_call(ns: &str, op: &str, msg: &[u8]) -> Result<Vec<u8>> {
         Err(errors::new(errors::ErrorKind::HostError(
             String::from_utf8(slice.to_vec()).unwrap(),
         )))
-    } else { // call succeeded
+    } else {
+        // call succeeded
         let len = unsafe { __host_response_len() };
         let buf = Vec::with_capacity(len as _);
         let retptr = buf.as_ptr();
@@ -88,14 +106,13 @@ pub fn host_call(ns: &str, op: &str, msg: &[u8]) -> Result<Vec<u8>> {
     }
 }
 
-
 #[macro_export]
 macro_rules! wapc_handler {
     ($user_handler:ident) => {
         #[no_mangle]
-        pub extern "C" fn __guest_call(op_len: i32, req_len: i32) -> i32 {            
-            use std::slice; 
-            use $crate::console_log;          
+        pub extern "C" fn __guest_call(op_len: i32, req_len: i32) -> i32 {
+            use std::slice;
+            use $crate::console_log;
 
             let buf: Vec<u8> = Vec::with_capacity(req_len as _);
             let req_ptr = buf.as_ptr();
@@ -111,8 +128,8 @@ macro_rules! wapc_handler {
                 )
             };
 
-            let opstr = ::std::str::from_utf8(op).unwrap();            
-            
+            let opstr = ::std::str::from_utf8(op).unwrap();
+
             match $user_handler(&opstr, slice) {
                 Ok(msg) => unsafe {
                     $crate::__guest_response(msg.as_ptr(), msg.len() as _);
