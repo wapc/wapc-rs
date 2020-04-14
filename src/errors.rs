@@ -1,4 +1,4 @@
-// Copyright 2015-2019 Capital One Services, LLC
+// Copyright 2015-2020 Capital One Services, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,14 +28,8 @@ pub fn new(kind: ErrorKind) -> Error {
 
 #[derive(Debug)]
 pub enum ErrorKind {
-    KeyValueError(String),
-    MessagingError(String),
-    EnvVar(std::env::VarError),
     UTF8(std::string::FromUtf8Error),
     UTF8Str(std::str::Utf8Error),
-    ProtobufEncoding(prost::EncodeError),
-    ProtobufDecoding(prost::DecodeError),
-    JsonMarshaling(serde_json::Error),
     HostError(String),
     BadDispatch(String),
 }
@@ -53,13 +47,7 @@ impl Error {
 impl StdError for Error {
     fn description(&self) -> &str {
         match *self.0 {
-            ErrorKind::KeyValueError(_) => "Key/value store error",
             ErrorKind::UTF8(_) => "UTF8 encoding failure",
-            ErrorKind::ProtobufEncoding(_) => "Protobuf encoding failure",
-            ErrorKind::ProtobufDecoding(_) => "Protobuf decoding failure",
-            ErrorKind::MessagingError(_) => "Messaging error",
-            ErrorKind::EnvVar(_) => "Environment variable error",
-            ErrorKind::JsonMarshaling(_) => "JSON encoding/decoding failure",
             ErrorKind::UTF8Str(_) => "UTF8 encoding failure",
             ErrorKind::HostError(_) => "Host Error",
             ErrorKind::BadDispatch(_) => "Bad dispatch",
@@ -68,13 +56,7 @@ impl StdError for Error {
 
     fn cause(&self) -> Option<&dyn StdError> {
         match *self.0 {
-            ErrorKind::KeyValueError(_) => None,
             ErrorKind::UTF8(ref e) => Some(e),
-            ErrorKind::ProtobufEncoding(ref e) => Some(e),
-            ErrorKind::ProtobufDecoding(ref e) => Some(e),
-            ErrorKind::MessagingError(_) => None,
-            ErrorKind::EnvVar(ref e) => Some(e),
-            ErrorKind::JsonMarshaling(ref e) => Some(e),
             ErrorKind::UTF8Str(ref e) => Some(e),
             ErrorKind::HostError(_) => None,
             ErrorKind::BadDispatch(_) => None,
@@ -85,13 +67,7 @@ impl StdError for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self.0 {
-            ErrorKind::KeyValueError(ref msg) => write!(f, "Key/Value error: {}", msg),
             ErrorKind::UTF8(ref e) => write!(f, "UTF8 encoding error: {}", e),
-            ErrorKind::ProtobufEncoding(ref e) => write!(f, "Protobuf encoding error: {}", e),
-            ErrorKind::ProtobufDecoding(ref e) => write!(f, "Protobuf decoding error: {}", e),
-            ErrorKind::MessagingError(ref msg) => write!(f, "Messaging error: {}", msg),
-            ErrorKind::EnvVar(ref e) => write!(f, "Environment variable error: {}", e),
-            ErrorKind::JsonMarshaling(ref e) => write!(f, "JSON marshaling error: {}", e),
             ErrorKind::UTF8Str(ref e) => write!(f, "UTF8 error: {}", e),
             ErrorKind::HostError(ref e) => write!(f, "Host error: {}", e),
             ErrorKind::BadDispatch(ref e) => write!(f, "Bad dispatch, attempted operation: {}", e),
@@ -105,32 +81,8 @@ impl From<std::str::Utf8Error> for Error {
     }
 }
 
-impl From<serde_json::Error> for Error {
-    fn from(source: serde_json::Error) -> Error {
-        Error(Box::new(ErrorKind::JsonMarshaling(source)))
-    }
-}
-
-impl From<std::env::VarError> for Error {
-    fn from(source: std::env::VarError) -> Error {
-        Error(Box::new(ErrorKind::EnvVar(source)))
-    }
-}
-
 impl From<std::string::FromUtf8Error> for Error {
     fn from(source: std::string::FromUtf8Error) -> Error {
         Error(Box::new(ErrorKind::UTF8(source)))
-    }
-}
-
-impl From<prost::EncodeError> for Error {
-    fn from(source: prost::EncodeError) -> Error {
-        Error(Box::new(ErrorKind::ProtobufEncoding(source)))
-    }
-}
-
-impl From<prost::DecodeError> for Error {
-    fn from(source: prost::DecodeError) -> Error {
-        Error(Box::new(ErrorKind::ProtobufDecoding(source)))
     }
 }
