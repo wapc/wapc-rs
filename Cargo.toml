@@ -1,6 +1,6 @@
 [package]
 name = "wapc-guest"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["waPC team <alothien@gmail.com>"]
 edition = "2018"
 description = "Guest SDK for building waPC-compliant WebAssembly Modules"
