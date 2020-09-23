@@ -39,6 +39,7 @@ struct EngineInner {
     host: Arc<ModuleState>,
 }
 
+/// A waPC engine provider that encapsulates the Wasmtime WebAssembly runtime
 pub struct WasmtimeEngineProvider {
     inner: Option<EngineInner>,
     wasidata: Option<WasiParams>,
@@ -46,6 +47,7 @@ pub struct WasmtimeEngineProvider {
 }
 
 impl WasmtimeEngineProvider {
+    /// Creates a new instance of the wasmtime provider
     pub fn new(buf: &[u8], wasi: Option<WasiParams>) -> WasmtimeEngineProvider {
         WasmtimeEngineProvider {
             inner: None,
@@ -166,8 +168,6 @@ fn arrange_imports(
                         host.clone(),
                         store.clone(),
                     )),
-                    // TODO: to forcibly block the use of WASI, these should error
-                    // rather than looking up WASI modules.
                     WASI_UNSTABLE_NAMESPACE => {
                         let f = Extern::from(
                             mod_registry

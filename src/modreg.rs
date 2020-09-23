@@ -1,4 +1,4 @@
-//! Taken from the wasmtime CLI
+//! Code borrowed from the wasmtime CLI
 
 use anyhow::Context as _;
 use std::{
