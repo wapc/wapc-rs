@@ -1,4 +1,4 @@
-# Wasmtime Engine Provider
+# Wasm3 Engine Provider
 
 This is a pluggable engine provider for the [waPC](https://github.com/wapc) RPC exchange protocol. This engine encapsulates 
 the [wasm3](https://github.com/wasm3) C-based, interpreted WebAssembly runtime.
