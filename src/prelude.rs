@@ -5,4 +5,3 @@ pub use crate::host_call;
 pub use crate::register_function;
 pub use crate::CallResult;
 pub use crate::HandlerResult;
-pub use crate::Result;

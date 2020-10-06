@@ -13,8 +13,8 @@
 //! use guest::prelude::*;
 //!
 //! #[no_mangle]
-//! pub fn _start() {
-//!     register_function("sample:Guest!Hello", hello_world);   
+//! pub extern "C" fn wapc_init() {
+//!   register_function("sample:Guest!Hello", hello_world);
 //! }
 //!
 //! fn hello_world(
@@ -28,8 +28,6 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
-/// WaPC Guest SDK result type
-pub type Result<T> = std::result::Result<T, errors::Error>;
 pub type CallResult = std::result::Result<Vec<u8>, Box<dyn std::error::Error + Sync + Send>>;
 pub type HandlerResult<T> = std::result::Result<T, Box<dyn std::error::Error + Sync + Send>>;
 
@@ -111,7 +109,7 @@ pub extern "C" fn __guest_call(op_len: i32, req_len: i32) -> i32 {
 }
 
 /// The function through which all host calls take place.
-pub fn host_call(binding: &str, ns: &str, op: &str, msg: &[u8]) -> Result<Vec<u8>> {
+pub fn host_call(binding: &str, ns: &str, op: &str, msg: &[u8]) -> CallResult {
     let callresult = unsafe {
         __host_call(
             binding.as_ptr() as _,
@@ -133,9 +131,9 @@ pub fn host_call(binding: &str, ns: &str, op: &str, msg: &[u8]) -> Result<Vec<u8
             __host_error(retptr);
             std::slice::from_raw_parts(retptr as _, errlen as _)
         };
-        Err(errors::new(errors::ErrorKind::HostError(
+        Err(Box::new(errors::new(errors::ErrorKind::HostError(
             String::from_utf8(slice.to_vec()).unwrap(),
-        )))
+        ))))
     } else {
         // call succeeded
         let len = unsafe { __host_response_len() };
