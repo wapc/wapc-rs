@@ -1,7 +1,8 @@
 //! Glob imports for common guest module development
 
+pub use crate::console_log;
 pub use crate::host_call;
-pub use crate::wapc_handler;
+pub use crate::register_function;
+pub use crate::CallResult;
+pub use crate::HandlerResult;
 pub use crate::Result;
-
-pub type CallResult = ::std::result::Result<Vec<u8>, Box<dyn std::error::Error + Sync + Send>>;

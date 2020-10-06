@@ -15,18 +15,13 @@ extern crate wapc_guest as guest;
 
 use guest::prelude::*;
 
-wapc_handler!(handle_wapc);
-
-pub fn handle_wapc(operation: &str, msg: &[u8]) -> CallResult {
-    match operation {
-        "sample:Guest!Hello" => hello_world(msg),
-        _ => Err("bad dispatch".into()),
-    }     
+#[no_mangle]
+pub fn _start() {
+    register_function("sample:Guest!Hello", hello_world);   
 }
 
-fn hello_world(
-   _msg: &[u8]) -> CallResult {
-   let _res = host_call("myBinding", "sample:Host", "Call", b"hello")?;
+fn hello_world(_msg: &[u8]) -> CallResult {
+    let _res = host_call("myBinding", "sample:Host", "Call", b"hello")?;
     Ok(vec![])
 }
 ```

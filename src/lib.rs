@@ -1,8 +1,8 @@
 //! # wapc-guest
 //!
 //! The `wapc-guest` library provides WebAssembly module developers with access to a
-//! [waPC](https://github.com/wapc)-compliant host runtime. Each guest module has a single
-//! call handler, declared with the `wapc_handler!` macro. Inside this call handler, the guest
+//! [waPC](https://github.com/wapc)-compliant host runtime. Each guest module registers
+//! function handlers with `register_function`. Inside this call handler, the guest
 //! module should check the operation of the delivered message and handle it accordingly,
 //! returning any binary payload in response.
 //!
@@ -12,13 +12,9 @@
 //!
 //! use guest::prelude::*;
 //!
-//! wapc_handler!(handle_wapc);
-//!
-//! pub fn handle_wapc(operation: &str, msg: &[u8]) -> CallResult {
-//!     match operation {
-//!         "sample:Guest!Hello" => hello_world(msg),
-//!         _ => Err("bad dispatch".into()),
-//!     }     
+//! #[no_mangle]
+//! pub fn _start() {
+//!     register_function("sample:Guest!Hello", hello_world);   
 //! }
 //!
 //! fn hello_world(
@@ -28,8 +24,14 @@
 //! }
 //! ```
 
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::sync::RwLock;
+
 /// WaPC Guest SDK result type
 pub type Result<T> = std::result::Result<T, errors::Error>;
+pub type CallResult = std::result::Result<Vec<u8>, Box<dyn std::error::Error + Sync + Send>>;
+pub type HandlerResult<T> = std::result::Result<T, Box<dyn std::error::Error + Sync + Send>>;
 
 #[link(wasm_import_module = "wapc")]
 extern "C" {
@@ -51,6 +53,61 @@ extern "C" {
     pub fn __guest_response(ptr: *const u8, len: usize);
     pub fn __guest_error(ptr: *const u8, len: usize);
     pub fn __guest_request(op_ptr: *const u8, ptr: *const u8);
+}
+
+lazy_static! {
+    static ref REGISTRY: RwLock<HashMap<String, fn(&[u8]) -> CallResult>> =
+        RwLock::new(HashMap::new());
+}
+
+pub fn register_function(name: &str, f: fn(&[u8]) -> CallResult) {
+    REGISTRY.write().unwrap().insert(name.to_string(), f);
+}
+
+#[no_mangle]
+pub extern "C" fn __guest_call(op_len: i32, req_len: i32) -> i32 {
+    use std::slice;
+
+    let buf: Vec<u8> = Vec::with_capacity(req_len as _);
+    let req_ptr = buf.as_ptr();
+
+    let opbuf: Vec<u8> = Vec::with_capacity(op_len as _);
+    let op_ptr = opbuf.as_ptr();
+
+    let (slice, op) = unsafe {
+        __guest_request(op_ptr, req_ptr);
+        (
+            slice::from_raw_parts(req_ptr, req_len as _),
+            slice::from_raw_parts(op_ptr, op_len as _),
+        )
+    };
+
+    let opstr = ::std::str::from_utf8(op).unwrap();
+
+    match REGISTRY.read().unwrap().get(opstr) {
+        Some(handler) => match handler(&slice) {
+            Ok(result) => {
+                unsafe {
+                    __guest_response(result.as_ptr(), result.len() as _);
+                }
+                1
+            }
+            Err(e) => {
+                let errmsg = format!("Guest call failed: {}", e);
+                unsafe {
+                    __guest_error(errmsg.as_ptr(), errmsg.len() as _);
+                }
+                0
+            }
+        },
+        None => {
+            let errmsg = format!("No handler registered for function \"{}\"", opstr);
+            unsafe {
+                __guest_error(errmsg.as_ptr(), errmsg.len() as _);
+            }
+            0
+        }
+    }
 }
 
 /// The function through which all host calls take place.
@@ -90,48 +147,6 @@ pub fn host_call(binding: &str, ns: &str, op: &str, msg: &[u8]) -> Result<Vec<u8
         };
         Ok(slice.to_vec())
     }
-}
-
-#[macro_export]
-macro_rules! wapc_handler {
-    ($user_handler:ident) => {
-        #[no_mangle]
-        pub extern "C" fn __guest_call(op_len: i32, req_len: i32) -> i32 {
-            use std::slice;
-            use $crate::console_log;
-
-            let buf: Vec<u8> = Vec::with_capacity(req_len as _);
-            let req_ptr = buf.as_ptr();
-
-            let opbuf: Vec<u8> = Vec::with_capacity(op_len as _);
-            let op_ptr = opbuf.as_ptr();
-
-            let (slice, op) = unsafe {
-                $crate::__guest_request(op_ptr, req_ptr);
-                (
-                    slice::from_raw_parts(req_ptr, req_len as _),
-                    slice::from_raw_parts(op_ptr, op_len as _),
-                )
-            };
-
-            let opstr = ::std::str::from_utf8(op).unwrap();
-
-            match $user_handler(&opstr, slice) {
-                Ok(msg) => unsafe {
-                    $crate::__guest_response(msg.as_ptr(), msg.len() as _);
-                    1
-                },
-                Err(e) => {
-                    let errmsg = format!("Guest call failed: {}", e);
-                    console_log(&errmsg);
-                    unsafe {
-                        $crate::__guest_error(errmsg.as_ptr(), errmsg.len() as _);
-                    }
-                    0
-                }
-            }
-        }
-    };
 }
 
 #[cold]
