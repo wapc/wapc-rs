@@ -16,8 +16,8 @@ extern crate wapc_guest as guest;
 use guest::prelude::*;
 
 #[no_mangle]
-pub fn _start() {
-    register_function("sample:Guest!Hello", hello_world);   
+pub extern "C" fn wapc_init() {
+  register_function("sample:Guest!Hello", hello_world);
 }
 
 fn hello_world(_msg: &[u8]) -> CallResult {
