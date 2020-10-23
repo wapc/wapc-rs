@@ -1,8 +1,7 @@
+use std::sync::Arc;
 use wapc::ModuleState;
 use wasmtime::Memory;
 use wasmtime::{Caller, Func, FuncType, Store, Val, ValType};
-use std::sync::Arc;
-
 
 pub(crate) fn guest_request_func(store: &Store, host: Arc<ModuleState>) -> Func {
     let callback_type = FuncType::new(Box::new([ValType::I32, ValType::I32]), Box::new([]));

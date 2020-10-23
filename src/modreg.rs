@@ -1,6 +1,7 @@
 //! Code borrowed from the wasmtime CLI
 
 use anyhow::Context as _;
+use std::error::Error;
 use std::{
     ffi::OsStr,
     fs::File,
@@ -9,7 +10,6 @@ use std::{
 use wasi_common::preopen_dir;
 use wasmtime::Store;
 use wasmtime_wasi::{old::snapshot_0::Wasi as WasiSnapshot0, Wasi};
-use std::error::Error;
 
 pub struct ModuleRegistry {
     pub wasi_snapshot_preview1: Wasi,

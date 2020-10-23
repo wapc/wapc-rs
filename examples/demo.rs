@@ -3,9 +3,9 @@ extern crate wapc;
 use std::fs::File;
 use std::io::prelude::*;
 
-use wasmtime_provider::WasmtimeEngineProvider;
-use wapc::WapcHost;
 use std::time::Instant;
+use wapc::WapcHost;
+use wasmtime_provider::WasmtimeEngineProvider;
 
 fn load_file(path: &str) -> Vec<u8> {
     println!("{}", path);
