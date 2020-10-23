@@ -3,9 +3,9 @@ extern crate wapc;
 use std::fs::File;
 use std::io::prelude::*;
 
+use std::time::Instant;
 use wapc::WapcHost;
 use wasm3_provider::Wasm3EngineProvider;
-use std::time::Instant;
 
 fn load_file(path: &str) -> Vec<u8> {
     println!("{}", path);

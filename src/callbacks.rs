@@ -1,13 +1,19 @@
-use wapc::ModuleState;
 use std::sync::Arc;
+use wapc::ModuleState;
 use wasm3::CallContext;
 
-pub(crate) fn host_call(ctx: &CallContext,
-                        bd_ptr: i32, bd_len: i32,
-                        ns_ptr: i32, ns_len: i32,
-                        op_ptr: i32, op_len: i32,
-                        ptr: i32, len: i32,
-                        host: Arc<ModuleState>) -> i32 {
+pub(crate) fn host_call(
+    ctx: &CallContext,
+    bd_ptr: i32,
+    bd_len: i32,
+    ns_ptr: i32,
+    ns_len: i32,
+    op_ptr: i32,
+    op_len: i32,
+    ptr: i32,
+    len: i32,
+    host: Arc<ModuleState>,
+) -> i32 {
     let vec = get_vec_from_memory(ctx, ptr, len);
     let bd_vec = get_vec_from_memory(ctx, bd_ptr, bd_len);
     let bd = ::std::str::from_utf8(&bd_vec).unwrap();
@@ -60,7 +66,7 @@ pub(crate) fn guest_error(ctx: &CallContext, ptr: i32, len: i32, host: Arc<Modul
 }
 
 // Writes the host error, if any, to the linear memory at the location supplied by the guest
-pub(crate) fn host_error(ctx: &CallContext, ptr: i32, host: Arc<ModuleState>)  {
+pub(crate) fn host_error(ctx: &CallContext, ptr: i32, host: Arc<ModuleState>) {
     if let Some(ref e) = host.get_host_error() {
         write_bytes_to_memory(ctx, ptr, e.as_bytes());
     }
@@ -70,7 +76,6 @@ pub(crate) fn host_error(ctx: &CallContext, ptr: i32, host: Arc<ModuleState>)  {
 pub(crate) fn host_error_length(host: Arc<ModuleState>) -> i32 {
     host.get_host_error().unwrap_or("".to_string()).len() as _
 }
-
 
 fn get_vec_from_memory(ctx: &CallContext, ptr: i32, len: i32) -> Vec<u8> {
     let data = unsafe { &*ctx.memory() };
@@ -82,5 +87,4 @@ fn write_bytes_to_memory(ctx: &CallContext, ptr: i32, slice: &[u8]) {
     unsafe {
         (&mut *ctx.memory_mut())[ptr as usize..][..slice.len()].copy_from_slice(slice);
     };
-
 }
