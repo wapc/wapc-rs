@@ -207,9 +207,8 @@ fn get_vec_from_memory(mem: Memory, ptr: i32, len: i32) -> Vec<u8> {
 }
 
 fn write_bytes_to_memory(memory: Memory, ptr: i32, slice: &[u8]) {
-    let data = unsafe { memory.data_unchecked_mut() };
-    // TODO: upgrade this to a faster memory write
-    for idx in 0..slice.len() {
-        data[idx + ptr as usize] = slice[idx];
+    unsafe {
+        let raw = memory.data_ptr().offset(ptr as isize);
+        raw.copy_from(slice.as_ptr(), slice.len())
     }
 }
