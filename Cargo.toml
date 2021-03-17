@@ -16,10 +16,15 @@ categories = ["wasm", "api-bindings"]
 [dependencies]
 wapc = "0.10.1"
 log = "0.4.11"
-env_logger = "0.7"
 serde = { version = "1.0.114", features = ["derive"] }
 serde_json = "1.0.56"
-wasmtime = "0.19.0"
-wasmtime-wasi = "0.19.1"
+wasmtime = "0.24.0"
+wasmtime-wasi = "0.24.0"
 anyhow = "1.0.31"
-wasi-common = "0.19.1"
+wasi-common = "0.24.0"
+wasi-cap-std-sync = "0.24.0"
+cap-std = "0.13"
+
+[dev-dependencies]
+wascc-codec="0.9.1"
+env_logger = "0.8.3"

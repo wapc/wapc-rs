@@ -4,7 +4,7 @@ use wasmtime::Memory;
 use wasmtime::{Caller, Func, FuncType, Store, Val, ValType};
 
 pub(crate) fn guest_request_func(store: &Store, host: Arc<ModuleState>) -> Func {
-    let callback_type = FuncType::new(Box::new([ValType::I32, ValType::I32]), Box::new([]));
+    let callback_type = FuncType::new(vec![ValType::I32, ValType::I32], vec![]);
     Func::new(
         store,
         callback_type,
@@ -24,7 +24,7 @@ pub(crate) fn guest_request_func(store: &Store, host: Arc<ModuleState>) -> Func 
 }
 
 pub(crate) fn console_log_func(store: &Store, host: Arc<ModuleState>) -> Func {
-    let callback_type = FuncType::new(Box::new([ValType::I32, ValType::I32]), Box::new([]));
+    let callback_type = FuncType::new(vec![ValType::I32, ValType::I32], vec![]);
 
     Func::new(
         store,
@@ -45,7 +45,7 @@ pub(crate) fn console_log_func(store: &Store, host: Arc<ModuleState>) -> Func {
 
 pub(crate) fn host_call_func(store: &Store, host: Arc<ModuleState>) -> Func {
     let callback_type = FuncType::new(
-        Box::new([
+        vec![
             ValType::I32,
             ValType::I32,
             ValType::I32,
@@ -54,8 +54,8 @@ pub(crate) fn host_call_func(store: &Store, host: Arc<ModuleState>) -> Func {
             ValType::I32,
             ValType::I32,
             ValType::I32,
-        ]),
-        Box::new([ValType::I32]),
+        ],
+        vec![ValType::I32],
     );
     Func::new(
         store,
@@ -96,7 +96,7 @@ pub(crate) fn host_call_func(store: &Store, host: Arc<ModuleState>) -> Func {
 }
 
 pub(crate) fn host_response_func(store: &Store, host: Arc<ModuleState>) -> Func {
-    let callback_type = FuncType::new(Box::new([ValType::I32]), Box::new([]));
+    let callback_type = FuncType::new(vec![ValType::I32], vec![]);
     Func::new(
         store,
         callback_type,
@@ -112,7 +112,7 @@ pub(crate) fn host_response_func(store: &Store, host: Arc<ModuleState>) -> Func 
 }
 
 pub(crate) fn host_response_len_func(store: &Store, host: Arc<ModuleState>) -> Func {
-    let callback_type = FuncType::new(Box::new([]), Box::new([ValType::I32]));
+    let callback_type = FuncType::new(vec![], vec![ValType::I32]);
 
     Func::new(
         store,
@@ -128,7 +128,7 @@ pub(crate) fn host_response_len_func(store: &Store, host: Arc<ModuleState>) -> F
 }
 
 pub(crate) fn guest_response_func(store: &Store, host: Arc<ModuleState>) -> Func {
-    let callback_type = FuncType::new(Box::new([ValType::I32, ValType::I32]), Box::new([]));
+    let callback_type = FuncType::new(vec![ValType::I32, ValType::I32], vec![]);
     Func::new(
         store,
         callback_type,
@@ -144,7 +144,7 @@ pub(crate) fn guest_response_func(store: &Store, host: Arc<ModuleState>) -> Func
 }
 
 pub(crate) fn guest_error_func(store: &Store, host: Arc<ModuleState>) -> Func {
-    let callback_type = FuncType::new(Box::new([ValType::I32, ValType::I32]), Box::new([]));
+    let callback_type = FuncType::new(vec![ValType::I32, ValType::I32], vec![]);
     Func::new(
         store,
         callback_type,
@@ -161,7 +161,7 @@ pub(crate) fn guest_error_func(store: &Store, host: Arc<ModuleState>) -> Func {
 }
 
 pub(crate) fn host_error_func(store: &Store, host: Arc<ModuleState>) -> Func {
-    let callback_type = FuncType::new(Box::new([ValType::I32]), Box::new([]));
+    let callback_type = FuncType::new(vec![ValType::I32], vec![]);
     Func::new(
         store,
         callback_type,
@@ -177,7 +177,7 @@ pub(crate) fn host_error_func(store: &Store, host: Arc<ModuleState>) -> Func {
 }
 
 pub(crate) fn host_error_len_func(store: &Store, host: Arc<ModuleState>) -> Func {
-    let callback_type = FuncType::new(Box::new([]), Box::new([ValType::I32]));
+    let callback_type = FuncType::new(vec![], vec![ValType::I32]);
     Func::new(
         store,
         callback_type,

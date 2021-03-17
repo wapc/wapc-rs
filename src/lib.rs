@@ -15,21 +15,6 @@ extern crate log;
 mod callbacks;
 mod modreg;
 
-macro_rules! call {
-    ($func:expr, $($p:expr),*) => {
-      match $func.call(&[$($p.into()),*]) {
-        Ok(result) => {
-          let result: i32 = result[0].i32().unwrap();
-          result
-        }
-        Err(e) => {
-            error!("Failure invoking guest module handler: {:?}", e);
-            0
-        }
-      }
-    }
-}
-
 struct EngineInner {
     instance: Arc<RwLock<Instance>>,
     guest_call_fn: Func,
@@ -69,16 +54,22 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
     }
 
     fn call(&mut self, op_length: i32, msg_length: i32) -> Result<i32, Box<dyn Error>> {
-        // Note that during this call, the guest should, through the functions
-        // it imports from the host, set the guest error and response
+        let engine_inner = self.inner.as_ref().unwrap();
+        let call = engine_inner
+            .guest_call_fn
+            .call(&[op_length.into(), msg_length.into()]);
 
-        let callresult: i32 = call!(
-            self.inner.as_ref().unwrap().guest_call_fn,
-            op_length,
-            msg_length
-        );
-
-        Ok(callresult)
+        match call {
+            Ok(result) => {
+                let result: i32 = result[0].i32().unwrap();
+                Ok(result)
+            }
+            Err(e) => {
+                error!("Failure invoking guest module handler: {:?}", e);
+                engine_inner.host.set_guest_error(e.to_string());
+                Ok(0)
+            }
+        }
     }
 
     fn replace(&mut self, module: &[u8]) -> Result<(), Box<dyn Error>> {
@@ -149,6 +140,7 @@ fn instance_from_buffer(
 /// order, we have to loop through the module imports and instantiate the
 /// corresponding callback. We **cannot** rely on a predictable import order
 /// in the wasm module
+#[allow(clippy::unnecessary_wraps)]
 fn arrange_imports(
     module: &Module,
     host: Arc<ModuleState>,
@@ -160,14 +152,16 @@ fn arrange_imports(
         .filter_map(|imp| {
             if let ExternType::Func(_) = imp.ty() {
                 match imp.module() {
-                    HOST_NAMESPACE => {
-                        Some(callback_for_import(imp.name(), host.clone(), store.clone()))
-                    }
+                    HOST_NAMESPACE => Some(callback_for_import(
+                        imp.name()?,
+                        host.clone(),
+                        store.clone(),
+                    )),
                     WASI_UNSTABLE_NAMESPACE => {
                         let f = Extern::from(
                             mod_registry
                                 .wasi_unstable
-                                .get_export(imp.name())
+                                .get_export(imp.name()?)
                                 .unwrap()
                                 .clone(),
                         );
@@ -177,7 +171,7 @@ fn arrange_imports(
                         let f: Extern = Extern::from(
                             mod_registry
                                 .wasi_snapshot_preview1
-                                .get_export(imp.name())
+                                .get_export(imp.name()?)
                                 .unwrap()
                                 .clone(),
                         );
@@ -194,25 +188,17 @@ fn arrange_imports(
 
 fn callback_for_import(import: &str, host: Arc<ModuleState>, store: Store) -> Extern {
     match import {
-        WapcFunctions::HOST_CONSOLE_LOG => callbacks::console_log_func(&store, host.clone()).into(),
-        WapcFunctions::HOST_CALL => callbacks::host_call_func(&store, host.clone()).into(),
-        WapcFunctions::GUEST_REQUEST_FN => {
-            callbacks::guest_request_func(&store, host.clone()).into()
-        }
-        WapcFunctions::HOST_RESPONSE_FN => {
-            callbacks::host_response_func(&store, host.clone()).into()
-        }
+        WapcFunctions::HOST_CONSOLE_LOG => callbacks::console_log_func(&store, host).into(),
+        WapcFunctions::HOST_CALL => callbacks::host_call_func(&store, host).into(),
+        WapcFunctions::GUEST_REQUEST_FN => callbacks::guest_request_func(&store, host).into(),
+        WapcFunctions::HOST_RESPONSE_FN => callbacks::host_response_func(&store, host).into(),
         WapcFunctions::HOST_RESPONSE_LEN_FN => {
-            callbacks::host_response_len_func(&store, host.clone()).into()
+            callbacks::host_response_len_func(&store, host).into()
         }
-        WapcFunctions::GUEST_RESPONSE_FN => {
-            callbacks::guest_response_func(&store, host.clone()).into()
-        }
-        WapcFunctions::GUEST_ERROR_FN => callbacks::guest_error_func(&store, host.clone()).into(),
-        WapcFunctions::HOST_ERROR_FN => callbacks::host_error_func(&store, host.clone()).into(),
-        WapcFunctions::HOST_ERROR_LEN_FN => {
-            callbacks::host_error_len_func(&store, host.clone()).into()
-        }
+        WapcFunctions::GUEST_RESPONSE_FN => callbacks::guest_response_func(&store, host).into(),
+        WapcFunctions::GUEST_ERROR_FN => callbacks::guest_error_func(&store, host).into(),
+        WapcFunctions::HOST_ERROR_FN => callbacks::host_error_func(&store, host).into(),
+        WapcFunctions::HOST_ERROR_LEN_FN => callbacks::host_error_len_func(&store, host).into(),
         _ => unreachable!(),
     }
 }

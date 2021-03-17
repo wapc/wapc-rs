@@ -26,6 +26,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let func = std::env::args().skip(2).next().unwrap();
 
     // hello.wasm - operation is wapc:sample!Hello (use ' quotes for linux CLI)
+    // hello_wasi.wasm - operation is wapc:sample!Hello
     // hello_as.wasm - operation is hello
     // hello_tinygo.wasm - operation is hello
     // hello_zig.wasm - operation is hello
