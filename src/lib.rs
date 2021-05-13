@@ -10,6 +10,8 @@ extern crate log;
 
 mod callbacks;
 
+const WASI_UNSTABLE: &str = "wasi_unstable";
+
 pub struct Wasm3EngineProvider {
     inner: Option<InnerProvider>,
     modbytes: Vec<u8>,
@@ -155,6 +157,15 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         ) {
             warn!("Module did not import __host_error_len");
         }
+
+        let _ = module.link_closure(
+            WASI_UNSTABLE,
+            "fd_write",
+            move |_ctx: &CallContext, (_, _, _, _): (i32, i32, i32, i32)| -> i32 {
+                warn!("Use of prohibited (WASI) fd_write function - suppressing output");
+                0
+            },
+        ); // don't care if this function is missing
 
         // Fail the initialization if we can't find the guest call function
         if let Err(_e) = module.find_function::<(i32, i32), i32>(WapcFunctions::GUEST_CALL) {
