@@ -50,8 +50,8 @@ impl ModuleRegistry {
 }
 
 pub(crate) fn compute_preopen_dirs(
-    dirs: &Vec<String>,
-    map_dirs: &Vec<(String, String)>,
+    dirs: &[String],
+    map_dirs: &[(String, String)],
 ) -> Result<Vec<(String, Dir)>, Box<dyn Error>> {
     let mut preopen_dirs = Vec::new();
 
@@ -66,7 +66,7 @@ pub(crate) fn compute_preopen_dirs(
     Ok(preopen_dirs)
 }
 
-#[allow(dead_code)]
+#[allow(dead_code, clippy::vec_init_then_push)]
 pub(crate) fn compute_argv(module: PathBuf, module_args: Vec<String>) -> Vec<String> {
     let mut result = Vec::new();
 
