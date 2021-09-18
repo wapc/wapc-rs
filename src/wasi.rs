@@ -1,4 +1,4 @@
-use cap_std::fs::Dir;
+use cap_std::{ambient_authority, fs::Dir};
 use std::error::Error;
 use std::{
     ffi::OsStr,
@@ -26,14 +26,18 @@ pub(crate) fn compute_preopen_dirs(
     dirs: &[String],
     map_dirs: &[(String, String)],
 ) -> Result<Vec<(String, Dir)>, Box<dyn Error>> {
+    let ambient_authority = ambient_authority();
     let mut preopen_dirs = Vec::new();
 
     for dir in dirs.iter() {
-        preopen_dirs.push((dir.clone(), unsafe { Dir::open_ambient_dir(dir)? }));
+        preopen_dirs.push((dir.clone(), Dir::open_ambient_dir(dir, ambient_authority)?));
     }
 
     for (guest, host) in map_dirs.iter() {
-        preopen_dirs.push((guest.clone(), unsafe { Dir::open_ambient_dir(host)? }));
+        preopen_dirs.push((
+            guest.clone(),
+            Dir::open_ambient_dir(host, ambient_authority)?,
+        ));
     }
 
     Ok(preopen_dirs)
