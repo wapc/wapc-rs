@@ -44,13 +44,13 @@ extern "C" {
         ptr: *const u8,
         len: usize,
     ) -> usize;
-    pub fn __host_response(ptr: *const u8);
+    pub fn __host_response(ptr: *mut u8);
     pub fn __host_response_len() -> usize;
     pub fn __host_error_len() -> usize;
-    pub fn __host_error(ptr: *const u8);
+    pub fn __host_error(ptr: *mut u8);
     pub fn __guest_response(ptr: *const u8, len: usize);
     pub fn __guest_error(ptr: *const u8, len: usize);
-    pub fn __guest_request(op_ptr: *const u8, ptr: *const u8);
+    pub fn __guest_request(op_ptr: *mut u8, ptr: *mut u8);
 }
 
 lazy_static! {
@@ -64,26 +64,20 @@ pub fn register_function(name: &str, f: fn(&[u8]) -> CallResult) {
 
 #[no_mangle]
 pub extern "C" fn __guest_call(op_len: i32, req_len: i32) -> i32 {
-    use std::slice;
+    let mut buf: Vec<u8> = Vec::with_capacity(req_len as _);
+    let mut opbuf: Vec<u8> = Vec::with_capacity(op_len as _);
 
-    let buf: Vec<u8> = Vec::with_capacity(req_len as _);
-    let req_ptr = buf.as_ptr();
-
-    let opbuf: Vec<u8> = Vec::with_capacity(op_len as _);
-    let op_ptr = opbuf.as_ptr();
-
-    let (slice, op) = unsafe {
-        __guest_request(op_ptr, req_ptr);
-        (
-            slice::from_raw_parts(req_ptr, req_len as _),
-            slice::from_raw_parts(op_ptr, op_len as _),
-        )
+    unsafe {
+        __guest_request(opbuf.as_mut_ptr(), buf.as_mut_ptr());
+        // The two buffers have now been initialized
+        buf.set_len(req_len as usize);
+        opbuf.set_len(op_len as usize);
     };
 
-    let opstr = ::std::str::from_utf8(op).unwrap();
+    let opstr = ::std::str::from_utf8(&opbuf).unwrap();
 
     match REGISTRY.read().unwrap().get(opstr) {
-        Some(handler) => match handler(&slice) {
+        Some(handler) => match handler(&buf) {
             Ok(result) => {
                 unsafe {
                     __guest_response(result.as_ptr(), result.len() as _);
@@ -125,25 +119,25 @@ pub fn host_call(binding: &str, ns: &str, op: &str, msg: &[u8]) -> CallResult {
     if callresult != 1 {
         // call was not successful
         let errlen = unsafe { __host_error_len() };
-        let buf = Vec::with_capacity(errlen as _);
-        let retptr = buf.as_ptr();
-        let slice = unsafe {
+        let mut buf = Vec::with_capacity(errlen as _);
+        let retptr = buf.as_mut_ptr();
+        unsafe {
             __host_error(retptr);
-            std::slice::from_raw_parts(retptr as _, errlen as _)
-        };
+            buf.set_len(errlen);
+        }
         Err(Box::new(errors::new(errors::ErrorKind::HostError(
-            String::from_utf8(slice.to_vec()).unwrap(),
+            String::from_utf8(buf).unwrap(),
         ))))
     } else {
         // call succeeded
         let len = unsafe { __host_response_len() };
-        let buf = Vec::with_capacity(len as _);
-        let retptr = buf.as_ptr();
-        let slice = unsafe {
+        let mut buf = Vec::with_capacity(len as _);
+        let retptr = buf.as_mut_ptr();
+        unsafe {
             __host_response(retptr);
-            std::slice::from_raw_parts(retptr as _, len as _)
-        };
-        Ok(slice.to_vec())
+            buf.set_len(len);
+        }
+        Ok(buf)
     }
 }
 
