@@ -1,9 +1,10 @@
+use std::cell::RefCell;
 use std::error::Error;
 use std::sync::Arc;
-use wapc::{ModuleState, WapcFunctions, WebAssemblyEngineProvider, HOST_NAMESPACE};
 
-use wasm3::Module;
-use wasm3::{CallContext, Environment, Runtime};
+use wapc::{ModuleState, WapcFunctions, WebAssemblyEngineProvider, HOST_NAMESPACE};
+use wasm3::error::Trap;
+use wasm3::{CallContext, Environment, Module, Runtime};
 
 #[macro_use]
 extern crate log;
@@ -14,14 +15,14 @@ const WASI_UNSTABLE: &str = "wasi_unstable";
 
 pub struct Wasm3EngineProvider {
     inner: Option<InnerProvider>,
-    modbytes: Vec<u8>,
+    modbytes: RefCell<Vec<u8>>,
 }
 
 impl Wasm3EngineProvider {
     pub fn new(buf: &[u8]) -> Wasm3EngineProvider {
         Wasm3EngineProvider {
             inner: None,
-            modbytes: buf.to_vec(),
+            modbytes: RefCell::new(buf.to_vec()),
         }
     }
 }
@@ -36,9 +37,10 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         info!("Initializing Wasm3 Engine");
         let env = Environment::new().expect("Unable to create environment");
         let rt = env.create_runtime(1024 * 120)?;
-        let module = Module::parse(&env, &self.modbytes).map_err(|e| Box::new(e))?;
+        let bytes = self.modbytes.take();
+        let module = Module::parse(&env, bytes).map_err(Box::new)?;
 
-        let mut module = rt.load_module(module).map_err(|e| Box::new(e))?;
+        let mut module = rt.load_module(module).map_err(Box::new)?;
 
         let mod_name = module.name().to_string();
 
@@ -46,7 +48,7 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         if let Err(_e) = module.link_closure(
             HOST_NAMESPACE,
             WapcFunctions::HOST_CALL,
-            move |ctx: &CallContext,
+            move |ctx: CallContext,
                   (bd_ptr, bd_len, ns_ptr, ns_len, op_ptr, op_len, ptr, len): (
                 i32,
                 i32,
@@ -57,8 +59,8 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
                 i32,
                 i32,
             )|
-                  -> i32 {
-                callbacks::host_call(
+                  -> Result<i32, Trap> {
+                Ok(callbacks::host_call(
                     ctx,
                     bd_ptr,
                     bd_len,
@@ -69,7 +71,7 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
                     ptr,
                     len,
                     h.clone(),
-                )
+                ))
             },
         ) {
             warn!("Guest module did not import __host_call - functionality may be limited");
@@ -79,8 +81,9 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         if let Err(_e) = module.link_closure(
             HOST_NAMESPACE,
             WapcFunctions::GUEST_REQUEST_FN,
-            move |ctx: &CallContext, (op_ptr, ptr): (i32, i32)| {
+            move |ctx: CallContext, (op_ptr, ptr): (i32, i32)| {
                 callbacks::guest_request(ctx, op_ptr, ptr, h.clone());
+                Ok(())
             },
         ) {
             error!("Module did not import __guest_request - will not work with waPC");
@@ -91,8 +94,9 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         if let Err(_e) = module.link_closure(
             HOST_NAMESPACE,
             WapcFunctions::HOST_CONSOLE_LOG,
-            move |ctx: &CallContext, (ptr, len): (i32, i32)| {
-                callbacks::console_log(ctx, ptr, len, h.clone())
+            move |ctx: CallContext, (ptr, len): (i32, i32)| {
+                callbacks::console_log(ctx, ptr, len, h.clone());
+                Ok(())
             },
         ) {
             warn!("Module did not import __console_log");
@@ -102,7 +106,10 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         if let Err(_e) = module.link_closure(
             HOST_NAMESPACE,
             WapcFunctions::HOST_RESPONSE_FN,
-            move |ctx: &CallContext, ptr: i32| callbacks::host_response(ctx, ptr, h.clone()),
+            move |ctx: CallContext, ptr: i32| {
+                callbacks::host_response(ctx, ptr, h.clone());
+                Ok(())
+            },
         ) {
             warn!("Module did not import __host_response");
         }
@@ -111,7 +118,9 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         if let Err(_e) = module.link_closure(
             HOST_NAMESPACE,
             WapcFunctions::HOST_RESPONSE_LEN_FN,
-            move |ctx: &CallContext, ()| -> i32 { callbacks::host_response_length(ctx, h.clone()) },
+            move |ctx: CallContext, ()| -> Result<i32, Trap> {
+                Ok(callbacks::host_response_length(ctx, h.clone()))
+            },
         ) {
             warn!("Module did not import __host_response_len");
         }
@@ -120,8 +129,9 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         if let Err(_e) = module.link_closure(
             HOST_NAMESPACE,
             WapcFunctions::GUEST_RESPONSE_FN,
-            move |ctx: &CallContext, (ptr, len): (i32, i32)| {
-                callbacks::guest_response(ctx, ptr, len, h.clone())
+            move |ctx: CallContext, (ptr, len): (i32, i32)| {
+                callbacks::guest_response(ctx, ptr, len, h.clone());
+                Ok(())
             },
         ) {
             error!("Module did not import __guest_response");
@@ -132,8 +142,9 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         if let Err(_e) = module.link_closure(
             HOST_NAMESPACE,
             WapcFunctions::GUEST_ERROR_FN,
-            move |ctx: &CallContext, (ptr, len): (i32, i32)| {
-                callbacks::guest_error(ctx, ptr, len, h.clone())
+            move |ctx: CallContext, (ptr, len): (i32, i32)| {
+                callbacks::guest_error(ctx, ptr, len, h.clone());
+                Ok(())
             },
         ) {
             error!("Module did not import __guest_error");
@@ -144,16 +155,21 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         if let Err(_e) = module.link_closure(
             HOST_NAMESPACE,
             WapcFunctions::HOST_ERROR_FN,
-            move |ctx: &CallContext, ptr: i32| callbacks::host_error(ctx, ptr, h.clone()),
+            move |ctx: CallContext, ptr: i32| {
+                callbacks::host_error(ctx, ptr, h.clone());
+                Ok(())
+            },
         ) {
             warn!("Module did not import __host_error");
         }
 
-        let h = host.clone();
+        let h = host;
         if let Err(_e) = module.link_closure(
             HOST_NAMESPACE,
             WapcFunctions::HOST_ERROR_LEN_FN,
-            move |_ctx: &CallContext, ()| -> i32 { callbacks::host_error_length(h.clone()) },
+            move |_ctx: CallContext, ()| -> Result<i32, Trap> {
+                Ok(callbacks::host_error_length(h.clone()))
+            },
         ) {
             warn!("Module did not import __host_error_len");
         }
@@ -161,18 +177,16 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
         let _ = module.link_closure(
             WASI_UNSTABLE,
             "fd_write",
-            move |_ctx: &CallContext, (_, _, _, _): (i32, i32, i32, i32)| -> i32 {
+            move |_ctx: CallContext, (_, _, _, _): (i32, i32, i32, i32)| -> Result<i32, Trap> {
                 warn!("Use of prohibited (WASI) fd_write function - suppressing output");
-                0
+                Ok(0)
             },
         ); // don't care if this function is missing
 
         // Fail the initialization if we can't find the guest call function
         if let Err(_e) = module.find_function::<(i32, i32), i32>(WapcFunctions::GUEST_CALL) {
             error!("Could not find __guest_call function in WebAssembly module");
-            return Err(
-                format!("Could not find __guest_call function in WebAssembly module").into(),
-            );
+            return Err("Could not find __guest_call function in WebAssembly module".into());
         }
 
         // Invoke all the starters in order (if they exist)
