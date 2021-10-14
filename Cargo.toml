@@ -12,6 +12,8 @@ readme = "README.md"
 keywords = ["sdk", "wapc", "webassembly", "wasm", "wasmtime"]
 categories = ["wasm", "api-bindings"]
 
+[features]
+cache = ["wasmtime/cache"]
 
 [dependencies]
 wapc = "0.10.1"
@@ -27,4 +29,4 @@ cap-std = "0.19.1"
 
 [dev-dependencies]
 wascc-codec = "0.9.1"
-env_logger = "0.8.3"
+env_logger = "0.9"

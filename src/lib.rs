@@ -1,6 +1,8 @@
-use std::error::Error;
+use std::{error::Error, path::Path};
 use wapc::{ModuleState, WapcFunctions, WasiParams, WebAssemblyEngineProvider, HOST_NAMESPACE};
-use wasmtime::{AsContextMut, Engine, Extern, ExternType, Func, Instance, Linker, Module, Store};
+use wasmtime::{
+    AsContextMut, Config, Engine, Extern, ExternType, Func, Instance, Linker, Module, Store,
+};
 use wasmtime_wasi::WasiCtx;
 
 // namespace needed for some language support
@@ -35,13 +37,35 @@ pub struct WasmtimeEngineProvider {
 }
 
 impl WasmtimeEngineProvider {
-    /// Creates a new instance of the wasmtime provider
+    /// Creates a new instance of a [WasmtimeEngineProvider].
     pub fn new(buf: &[u8], wasi: Option<WasiParams>) -> WasmtimeEngineProvider {
         let engine = Engine::default();
+        Self::new_with_engine(buf, engine, wasi)
+    }
+
+    #[cfg(feature = "cache")]
+    /// Creates a new instance of a [WasmtimeEngineProvider] with caching enabled.
+    pub fn new_with_cache(
+        buf: &[u8],
+        wasi: Option<WasiParams>,
+        cache_path: Option<&Path>,
+    ) -> anyhow::Result<WasmtimeEngineProvider> {
+        let mut config = Config::new();
+        config.strategy(wasmtime::Strategy::Cranelift)?;
+        if let Some(cache) = cache_path {
+            config.cache_config_load(cache)?;
+        } else if let Err(e) = config.cache_config_load_default() {
+            warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
+        }
+        let engine = Engine::new(&config)?;
+        Ok(Self::new_with_engine(buf, engine, wasi))
+    }
+
+    /// Creates a new instance of a [WasmtimeEngineProvider] from a separately created [wasmtime::Engine].
+    pub fn new_with_engine(buf: &[u8], engine: Engine, wasi: Option<WasiParams>) -> Self {
         let mut linker: Linker<WapcStore> = Linker::new(&engine);
         wasmtime_wasi::add_to_linker(&mut linker, |s| &mut s.wasi_ctx).unwrap();
-        let wasi_default = WasiParams::default();
-        let wasi_params = wasi.as_ref().unwrap_or(&wasi_default);
+        let wasi_params = wasi.unwrap_or_default();
         let wasi_ctx = wasi::init_ctx(
             &wasi::compute_preopen_dirs(&wasi_params.preopened_dirs, &wasi_params.map_dirs)
                 .unwrap(),
