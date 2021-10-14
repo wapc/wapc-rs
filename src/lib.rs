@@ -1,8 +1,9 @@
-use std::error::Error;
-
-use wapc::{ModuleState, WapcFunctions, WasiParams, WebAssemblyEngineProvider, HOST_NAMESPACE};
-use wasmtime::{AsContextMut, Engine, Extern, ExternType, Func, Instance, Linker, Module, Store};
 #[cfg(feature = "wasi")]
+use std::{error::Error, path::Path};
+use wapc::{ModuleState, WapcFunctions, WasiParams, WebAssemblyEngineProvider, HOST_NAMESPACE};
+use wasmtime::{
+    AsContextMut, Config, Engine, Extern, ExternType, Func, Instance, Linker, Module, Store,
+};
 use wasmtime_wasi::WasiCtx;
 
 // namespace needed for some language support
