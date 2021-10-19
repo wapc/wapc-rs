@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    uses: wapc/wasmtime-provider/.github/workflows/tests.yml@main
+    uses: wapc/wasmtime-provider/.github/workflows/tests.yml@master
 
   release:
     runs-on: ubuntu-latest
