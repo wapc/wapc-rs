@@ -1,6 +1,6 @@
 [package]
 name = "wasmtime-provider"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["waPC Team"]
 edition = "2018"
 exclude = [".assets"]
@@ -26,5 +26,5 @@ wasi-cap-std-sync = "0.30.0"
 cap-std = "0.19.1"
 
 [dev-dependencies]
-wascc-codec="0.9.1"
+wascc-codec = "0.9.1"
 env_logger = "0.8.3"
