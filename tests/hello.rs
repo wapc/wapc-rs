@@ -4,8 +4,15 @@ use wapc::WapcHost;
 
 fn create_guest(path: String) -> Result<WapcHost, wapc::errors::Error> {
     let buf = read(path)?;
-
-    let engine = wasmtime_provider::WasmtimeEngineProvider::new(&buf, None);
+    cfg_if::cfg_if! {
+      if #[cfg(feature = "cache")] {
+        let engine =
+        wasmtime_provider::WasmtimeEngineProvider::new_with_cache(&buf, None, None).unwrap();
+      } else {
+        let engine =
+        wasmtime_provider::WasmtimeEngineProvider::new(&buf, None);
+      }
+    }
     WapcHost::new(Box::new(engine), move |_a, _b, _c, _d, _e| Ok(vec![]))
 }
 

@@ -27,10 +27,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace
+      - name: test
+        run: make test
 
   fmt:
     name: Rustfmt

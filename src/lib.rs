@@ -50,9 +50,9 @@ impl WasmtimeEngineProvider {
     pub fn new_with_cache(
         buf: &[u8],
         wasi: Option<WasiParams>,
-        cache_path: Option<&Path>,
+        cache_path: Option<&std::path::Path>,
     ) -> anyhow::Result<WasmtimeEngineProvider> {
-        let mut config = Config::new();
+        let mut config = wasmtime::Config::new();
         config.strategy(wasmtime::Strategy::Cranelift)?;
         if let Some(cache) = cache_path {
             config.cache_config_load(cache)?;
