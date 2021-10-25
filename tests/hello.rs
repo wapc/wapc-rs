@@ -30,6 +30,7 @@ fn runs_hello_as() -> anyhow::Result<()> {
 }
 
 #[test]
+#[cfg(feature = "wasi")]
 fn runs_hello_tinygo() -> anyhow::Result<()> {
     let guest = create_guest("./.assets/hello_tinygo.wasm".to_string())?;
 
@@ -40,6 +41,7 @@ fn runs_hello_tinygo() -> anyhow::Result<()> {
 }
 
 #[test]
+#[cfg(feature = "wasi")]
 fn runs_hello_wasi() -> anyhow::Result<()> {
     let guest = create_guest("./.assets/hello_wasi.wasm".to_string())?;
 

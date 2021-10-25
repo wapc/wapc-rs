@@ -2,6 +2,7 @@ use std::error::Error;
 
 use wapc::{ModuleState, WapcFunctions, WasiParams, WebAssemblyEngineProvider, HOST_NAMESPACE};
 use wasmtime::{AsContextMut, Engine, Extern, ExternType, Func, Instance, Linker, Module, Store};
+#[cfg(feature = "wasi")]
 use wasmtime_wasi::WasiCtx;
 
 // namespace needed for some language support
@@ -14,6 +15,7 @@ use std::sync::{Arc, RwLock};
 extern crate log;
 
 mod callbacks;
+#[cfg(feature = "wasi")]
 mod wasi;
 
 struct EngineInner {
@@ -23,6 +25,7 @@ struct EngineInner {
 }
 
 struct WapcStore {
+    #[cfg(feature = "wasi")]
     wasi_ctx: WasiCtx,
 }
 
@@ -61,18 +64,27 @@ impl WasmtimeEngineProvider {
     }
 
     /// Creates a new instance of a [WasmtimeEngineProvider] from a separately created [wasmtime::Engine].
+    #[allow(unused)]
     pub fn new_with_engine(buf: &[u8], engine: Engine, wasi: Option<WasiParams>) -> Self {
         let mut linker: Linker<WapcStore> = Linker::new(&engine);
-        wasmtime_wasi::add_to_linker(&mut linker, |s| &mut s.wasi_ctx).unwrap();
-        let wasi_params = wasi.unwrap_or_default();
-        let wasi_ctx = wasi::init_ctx(
-            &wasi::compute_preopen_dirs(&wasi_params.preopened_dirs, &wasi_params.map_dirs)
-                .unwrap(),
-            &wasi_params.argv,
-            &wasi_params.env_vars,
-        )
-        .unwrap();
-        let store = Store::new(&engine, WapcStore { wasi_ctx });
+
+        cfg_if::cfg_if! {
+          if #[cfg(feature = "wasi")] {
+            wasmtime_wasi::add_to_linker(&mut linker, |s| &mut s.wasi_ctx).unwrap();
+            let wasi_params = wasi.unwrap_or_default();
+            let wasi_ctx = wasi::init_ctx(
+                &wasi::compute_preopen_dirs(&wasi_params.preopened_dirs, &wasi_params.map_dirs)
+                    .unwrap(),
+                &wasi_params.argv,
+                &wasi_params.env_vars,
+            )
+            .unwrap();
+            let store = Store::new(&engine, WapcStore { wasi_ctx });
+          } else {
+            let store = Store::new(&engine, WapcStore {});
+          }
+        };
+
         WasmtimeEngineProvider {
             inner: None,
             modbytes: buf.to_vec(),

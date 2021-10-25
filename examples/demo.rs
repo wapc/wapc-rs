@@ -18,12 +18,12 @@ fn load_file(path: &str) -> Vec<u8> {
 pub fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     env_logger::init();
     let n = Instant::now();
-    let module_bytes = load_file(&std::env::args().skip(1).next().unwrap());
+    let module_bytes = load_file(&std::env::args().nth(1).unwrap());
     let engine = WasmtimeEngineProvider::new(&module_bytes, None);
 
     let host = WapcHost::new(Box::new(engine), host_callback)?;
 
-    let func = std::env::args().skip(2).next().unwrap();
+    let func = std::env::args().nth(2).unwrap();
 
     // hello.wasm - operation is wapc:sample!Hello (use ' quotes for linux CLI)
     // hello_wasi.wasm - operation is wapc:sample!Hello
