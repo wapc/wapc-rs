@@ -1,9 +1,9 @@
-use cap_std::{ambient_authority, fs::Dir};
 use std::error::Error;
-use std::{
-    ffi::OsStr,
-    path::{Component, PathBuf},
-};
+use std::ffi::OsStr;
+use std::path::{Component, PathBuf};
+
+use cap_std::ambient_authority;
+use cap_std::fs::Dir;
 use wasi_common::WasiCtx;
 
 pub(crate) fn init_ctx(

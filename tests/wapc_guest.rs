@@ -1,7 +1,7 @@
 use std::fs::read;
-use wascc_codec::{deserialize, serialize};
 
 use wapc::WapcHost;
+use wascc_codec::{deserialize, serialize};
 #[test]
 fn runs_wapc_guest() -> anyhow::Result<()> {
     let buf = read("tests/wasm/wapc_guest/test.wasm".to_string())?;

@@ -1,7 +1,9 @@
 use std::sync::Arc;
+
 use wapc::ModuleState;
-use wasmtime::Memory;
-use wasmtime::{AsContext, AsContextMut, Caller, Func, FuncType, StoreContext, Val, ValType};
+use wasmtime::{
+    AsContext, AsContextMut, Caller, Func, FuncType, Memory, StoreContext, Val, ValType,
+};
 
 pub(crate) fn guest_request_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
     let callback_type = FuncType::new(vec![ValType::I32, ValType::I32], vec![]);

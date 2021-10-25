@@ -2,8 +2,8 @@ extern crate wapc;
 
 use std::fs::File;
 use std::io::prelude::*;
-
 use std::time::Instant;
+
 use wapc::WapcHost;
 use wasmtime_provider::WasmtimeEngineProvider;
 
