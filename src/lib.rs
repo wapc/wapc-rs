@@ -1,9 +1,8 @@
-#[cfg(feature = "wasi")]
-use std::{error::Error, path::Path};
+use std::error::Error;
 use wapc::{ModuleState, WapcFunctions, WasiParams, WebAssemblyEngineProvider, HOST_NAMESPACE};
-use wasmtime::{
-    AsContextMut, Config, Engine, Extern, ExternType, Func, Instance, Linker, Module, Store,
-};
+
+use wasmtime::{AsContextMut, Engine, Extern, ExternType, Func, Instance, Linker, Module, Store};
+#[cfg(feature = "wasi")]
 use wasmtime_wasi::WasiCtx;
 
 // namespace needed for some language support
@@ -43,16 +42,25 @@ pub struct WasmtimeEngineProvider {
 
 impl Clone for WasmtimeEngineProvider {
     fn clone(&self) -> Self {
-        let wasi_ctx = init_wasi(&self.wasi_params).unwrap();
-        let store = Store::new(&self.engine, WapcStore { wasi_ctx });
+        let engine = self.engine.clone();
+        cfg_if::cfg_if! {
+          if #[cfg(feature = "wasi")] {
+            let wasi_ctx = init_wasi(&self.wasi_params).unwrap();
+            let store = Store::new(&engine, WapcStore { wasi_ctx });
+          } else {
+            let store = Store::new(&engine, WapcStore {});
+          }
+        };
+
         match &self.inner {
             Some(state) => {
                 let mut new = Self {
                     module: self.module.clone(),
                     inner: None,
                     store,
-                    engine: self.engine.clone(),
+                    engine,
                     linker: self.linker.clone(),
+                    #[cfg(feature = "wasi")]
                     wasi_params: self.wasi_params.clone(),
                 };
                 new.init(state.host.clone()).unwrap();
@@ -62,8 +70,9 @@ impl Clone for WasmtimeEngineProvider {
                 module: self.module.clone(),
                 inner: None,
                 store,
-                engine: self.engine.clone(),
+                engine,
                 linker: self.linker.clone(),
+                #[cfg(feature = "wasi")]
                 wasi_params: self.wasi_params.clone(),
             },
         }
@@ -120,9 +129,6 @@ impl WasmtimeEngineProvider {
             let store = Store::new(&engine, WapcStore {});
           }
         };
-
-        let mut linker: Linker<WapcStore> = Linker::new(&engine);
-        wasmtime_wasi::add_to_linker(&mut linker, |s| &mut s.wasi_ctx).unwrap();
 
         Ok(WasmtimeEngineProvider {
             module,
@@ -230,6 +236,7 @@ fn instance_from_module(
     Ok(wasmtime::Instance::new(store.as_context_mut(), module, imports?.as_slice()).unwrap())
 }
 
+#[cfg(feature = "wasi")]
 fn init_wasi(params: &WasiParams) -> anyhow::Result<WasiCtx> {
     wasi::init_ctx(
         &wasi::compute_preopen_dirs(&params.preopened_dirs, &params.map_dirs).unwrap(),

@@ -10,7 +10,7 @@ fn create_guest(path: String) -> Result<WapcHost, wapc::errors::Error> {
         wasmtime_provider::WasmtimeEngineProvider::new_with_cache(&buf, None, None).unwrap();
       } else {
         let engine =
-        wasmtime_provider::WasmtimeEngineProvider::new(&buf, None);
+        wasmtime_provider::WasmtimeEngineProvider::new(&buf, None).unwrap();
       }
     }
     WapcHost::new(Box::new(engine), move |_a, _b, _c, _d, _e| Ok(vec![]))
