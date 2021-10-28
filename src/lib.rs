@@ -32,16 +32,47 @@ struct WapcStore {
 
 /// A waPC engine provider that encapsulates the Wasmtime WebAssembly runtime
 pub struct WasmtimeEngineProvider {
+    module: Module,
+    #[cfg(feature = "wasi")]
+    wasi_params: WasiParams,
     inner: Option<EngineInner>,
-    modbytes: Vec<u8>,
     store: Store<WapcStore>,
     engine: Engine,
     linker: Linker<WapcStore>,
 }
 
+impl Clone for WasmtimeEngineProvider {
+    fn clone(&self) -> Self {
+        let wasi_ctx = init_wasi(&self.wasi_params).unwrap();
+        let store = Store::new(&self.engine, WapcStore { wasi_ctx });
+        match &self.inner {
+            Some(state) => {
+                let mut new = Self {
+                    module: self.module.clone(),
+                    inner: None,
+                    store,
+                    engine: self.engine.clone(),
+                    linker: self.linker.clone(),
+                    wasi_params: self.wasi_params.clone(),
+                };
+                new.init(state.host.clone()).unwrap();
+                new
+            }
+            None => Self {
+                module: self.module.clone(),
+                inner: None,
+                store,
+                engine: self.engine.clone(),
+                linker: self.linker.clone(),
+                wasi_params: self.wasi_params.clone(),
+            },
+        }
+    }
+}
+
 impl WasmtimeEngineProvider {
     /// Creates a new instance of a [WasmtimeEngineProvider].
-    pub fn new(buf: &[u8], wasi: Option<WasiParams>) -> WasmtimeEngineProvider {
+    pub fn new(buf: &[u8], wasi: Option<WasiParams>) -> anyhow::Result<WasmtimeEngineProvider> {
         let engine = Engine::default();
         Self::new_with_engine(buf, engine, wasi)
     }
@@ -61,13 +92,17 @@ impl WasmtimeEngineProvider {
             warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
         }
         let engine = Engine::new(&config)?;
-        Ok(Self::new_with_engine(buf, engine, wasi))
+        Self::new_with_engine(buf, engine, wasi)
     }
 
     /// Creates a new instance of a [WasmtimeEngineProvider] from a separately created [wasmtime::Engine].
-    #[allow(unused)]
-    pub fn new_with_engine(buf: &[u8], engine: Engine, wasi: Option<WasiParams>) -> Self {
+    pub fn new_with_engine(
+        buf: &[u8],
+        engine: Engine,
+        wasi: Option<WasiParams>,
+    ) -> anyhow::Result<Self> {
         let mut linker: Linker<WapcStore> = Linker::new(&engine);
+        let module = Module::new(&engine, buf)?;
 
         cfg_if::cfg_if! {
           if #[cfg(feature = "wasi")] {
@@ -86,25 +121,25 @@ impl WasmtimeEngineProvider {
           }
         };
 
-        WasmtimeEngineProvider {
+        let mut linker: Linker<WapcStore> = Linker::new(&engine);
+        wasmtime_wasi::add_to_linker(&mut linker, |s| &mut s.wasi_ctx).unwrap();
+
+        Ok(WasmtimeEngineProvider {
+            module,
+            #[cfg(feature = "wasi")]
+            wasi_params,
             inner: None,
-            modbytes: buf.to_vec(),
             store,
             engine,
             linker,
-        }
+        })
     }
 }
 
 impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
     fn init(&mut self, host: Arc<ModuleState>) -> Result<(), Box<dyn Error>> {
-        let instance = instance_from_buffer(
-            &mut self.store,
-            &self.engine,
-            &self.modbytes,
-            host.clone(),
-            &self.linker,
-        )?;
+        let instance =
+            instance_from_module(&mut self.store, &self.module, host.clone(), &self.linker)?;
         let instance_ref = Arc::new(RwLock::new(instance));
         let gc = guest_call_fn(self.store.as_context_mut(), instance_ref.clone())?;
         self.inner = Some(EngineInner {
@@ -183,6 +218,25 @@ fn instance_from_buffer(
     let module = Module::new(engine, buf).unwrap();
     let imports = arrange_imports(&module, state, store, linker);
     Ok(wasmtime::Instance::new(store.as_context_mut(), &module, imports?.as_slice()).unwrap())
+}
+
+fn instance_from_module(
+    store: &mut Store<WapcStore>,
+    module: &Module,
+    state: Arc<ModuleState>,
+    linker: &Linker<WapcStore>,
+) -> Result<Instance, Box<dyn Error>> {
+    let imports = arrange_imports(module, state, store, linker);
+    Ok(wasmtime::Instance::new(store.as_context_mut(), module, imports?.as_slice()).unwrap())
+}
+
+fn init_wasi(params: &WasiParams) -> anyhow::Result<WasiCtx> {
+    wasi::init_ctx(
+        &wasi::compute_preopen_dirs(&params.preopened_dirs, &params.map_dirs).unwrap(),
+        &params.argv,
+        &params.env_vars,
+    )
+    .map_err(|e| anyhow::anyhow!("WASI initialization failed: {}", e))
 }
 
 /// wasmtime requires that the list of callbacks be "zippable" with the list
