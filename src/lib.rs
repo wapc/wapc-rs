@@ -1,7 +1,9 @@
 use std::error::Error;
 use wapc::{ModuleState, WapcFunctions, WasiParams, WebAssemblyEngineProvider, HOST_NAMESPACE};
 
-use wasmtime::{AsContextMut, Engine, Extern, ExternType, Func, Instance, Linker, Module, Store};
+use wasmtime::{
+    AsContextMut, Engine, Extern, ExternType, Instance, Linker, Module, Store, TypedFunc,
+};
 #[cfg(feature = "wasi")]
 use wasmtime_wasi::WasiCtx;
 
@@ -20,7 +22,7 @@ mod wasi;
 
 struct EngineInner {
     instance: Arc<RwLock<Instance>>,
-    guest_call_fn: Func,
+    guest_call_fn: TypedFunc<(i32, i32), i32>,
     host: Arc<ModuleState>,
 }
 
@@ -161,13 +163,10 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
         let engine_inner = self.inner.as_ref().unwrap();
         let call = engine_inner
             .guest_call_fn
-            .call(&mut self.store, &[op_length.into(), msg_length.into()]);
+            .call(&mut self.store, (op_length.into(), msg_length.into()));
 
         match call {
-            Ok(result) => {
-                let result: i32 = result[0].i32().unwrap();
-                Ok(result)
-            }
+            Ok(result) => Ok(result),
             Err(e) => {
                 error!("Failure invoking guest module handler: {:?}", e);
                 engine_inner.host.set_guest_error(e.to_string());
@@ -207,7 +206,9 @@ impl WasmtimeEngineProvider {
                 .unwrap()
                 .get_export(&mut self.store, starter)
             {
-                ext.into_func().unwrap().call(&mut self.store, &[])?;
+                ext.into_func()
+                    .unwrap()
+                    .call(&mut self.store, &[], &mut [])?;
             }
         }
         Ok(())
@@ -302,11 +303,11 @@ fn callback_for_import(store: impl AsContextMut, import: &str, host: Arc<ModuleS
 fn guest_call_fn(
     store: impl AsContextMut,
     instance: Arc<RwLock<Instance>>,
-) -> Result<Func, Box<dyn Error>> {
-    if let Some(func) = instance
+) -> Result<TypedFunc<(i32, i32), i32>, Box<dyn Error>> {
+    if let Ok(func) = instance
         .read()
         .unwrap()
-        .get_func(store, WapcFunctions::GUEST_CALL)
+        .get_typed_func::<(i32, i32), i32, _>(store, WapcFunctions::GUEST_CALL)
     {
         Ok(func)
     } else {
