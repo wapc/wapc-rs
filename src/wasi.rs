@@ -2,8 +2,7 @@ use std::error::Error;
 use std::ffi::OsStr;
 use std::path::{Component, PathBuf};
 
-use cap_std::ambient_authority;
-use cap_std::fs::Dir;
+use wasi_cap_std_sync::{ambient_authority, Dir};
 use wasi_common::WasiCtx;
 
 pub(crate) fn init_ctx(
