@@ -1,0 +1,15 @@
+[package]
+name = "wapc-guest"
+version = "0.4.0"
+authors = ["waPC team <alothien@gmail.com>"]
+edition = "2018"
+description = "Guest SDK for building waPC-compliant WebAssembly Modules"
+license = "Apache-2.0"
+homepage = "https://wascap.io/comms/"
+documentation = "https://docs.rs/wapc-guest"
+readme = "README.md"
+keywords = ["sdk", "wapc", "webassembly", "wasm", "waxosuit"]
+categories = ["wasm", "api-bindings"]
+
+[dependencies]
+lazy_static = "1.4.0"
