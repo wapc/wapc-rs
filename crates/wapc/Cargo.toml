@@ -1,0 +1,17 @@
+[package]
+name = "wapc"
+version = "0.10.1"
+authors = ["waPC team <alothien@gmail.com>"]
+edition = "2018"
+description = "An engine-pluggable WebAssembly Host Runtime implementing the waPC Standard"
+license = "Apache-2.0"
+homepage = "https://github.com/wapc"
+documentation = "https://docs.rs/wapc"
+readme = "README.md"
+keywords = ["sdk", "wapc", "webassembly", "wasm", "wasi"]
+categories = ["wasm", "api-bindings"]
+exclude = [".assets"]
+
+[dependencies]
+log = "0.4"
+parking_lot = "0.11"
