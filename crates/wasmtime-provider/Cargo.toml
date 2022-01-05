@@ -1,0 +1,34 @@
+[package]
+name = "wasmtime-provider"
+version = "0.0.7"
+authors = ["waPC Team"]
+edition = "2021"
+exclude = [".assets"]
+description = "A wasmtime engine provider for the waPC host"
+license = "Apache-2.0"
+homepage = "https://github.com/wapc/wasmtime-provider"
+documentation = "https://docs.rs/wasmtime-provider"
+readme = "README.md"
+keywords = ["sdk", "wapc", "webassembly", "wasm", "wasmtime"]
+categories = ["wasm", "api-bindings"]
+
+[features]
+default = ["wasi"]
+cache = ["wasmtime/cache"]
+wasi = ["wasi-common", "wasi-cap-std-sync", "wasmtime-wasi"]
+
+[dependencies]
+wapc = { path = "../wapc-rust" }
+log = "0.4"
+wasmtime = "0.31"
+anyhow = "1.0"
+cfg-if = "1.0.0"
+
+# feature = wasi
+wasmtime-wasi = { version = "0.31", optional = true }
+wasi-common = { version = "0.31", optional = true }
+wasi-cap-std-sync = { version = "0.31", optional = true }
+
+[dev-dependencies]
+wascc-codec = "0.9.1"
+env_logger = "0.9"
