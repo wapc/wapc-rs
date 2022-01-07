@@ -1,17 +1,24 @@
 [package]
 name = "wapc"
 version = "0.10.1"
-authors = ["waPC team <alothien@gmail.com>"]
-edition = "2018"
-description = "An engine-pluggable WebAssembly Host Runtime implementing the waPC Standard"
+authors = [
+  "Kevin Hoffman <alothien@gmail.com>",
+  "Jarrod Overson <jsoverson@gmail.com>",
+  "Phil Kedy <phil.kedy@gmail.com>",
+]
+edition = "2021"
+description = "An engine-pluggable WebAssembly Host Runtime implementing the waPC protocol."
 license = "Apache-2.0"
-homepage = "https://github.com/wapc"
+homepage = "https://wapc.io"
 documentation = "https://docs.rs/wapc"
 readme = "README.md"
 keywords = ["sdk", "wapc", "webassembly", "wasm", "wasi"]
 categories = ["wasm", "api-bindings"]
-exclude = [".assets"]
 
 [dependencies]
 log = "0.4"
 parking_lot = "0.11"
+thiserror = "1.0"
+
+[dev-dependencies]
+wasmtime-provider = { path = "../wasmtime-provider" }

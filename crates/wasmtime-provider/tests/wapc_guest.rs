@@ -1,16 +1,20 @@
 use std::fs::read;
 
-use wapc::WapcHost;
-use wascc_codec::{deserialize, serialize};
+use wapc::{errors, WapcHost};
+use wapc_codec::messagepack::{deserialize, serialize};
+
 #[test]
-fn runs_wapc_guest() -> anyhow::Result<()> {
-    let buf = read("tests/wasm/wapc_guest/test.wasm".to_string())?;
+fn runs_wapc_guest() -> Result<(), errors::Error> {
+  let buf = read("../../wasm/crates/wapc-guest-test/build/wapc_guest_test.wasm")?;
 
-    let engine = wasmtime_provider::WasmtimeEngineProvider::new(&buf, None)?;
-    let guest = WapcHost::new(Box::new(engine), move |_a, _b, _c, _d, _e| Ok(vec![]))?;
+  let engine = wasmtime_provider::WasmtimeEngineProvider::new(&buf, None)?;
+  let guest = WapcHost::new(
+    Box::new(engine),
+    Some(Box::new(move |_a, _b, _c, _d, _e| Ok(vec![]))),
+  )?;
 
-    let callresult = guest.call("echo", &serialize("hello world").unwrap())?;
-    let result: String = deserialize(&callresult).unwrap();
-    assert_eq!(result, "hello world");
-    Ok(())
+  let callresult = guest.call("echo", &serialize("hello world").unwrap())?;
+  let result: String = deserialize(&callresult).unwrap();
+  assert_eq!(result, "hello world");
+  Ok(())
 }

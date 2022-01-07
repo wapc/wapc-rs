@@ -1,0 +1,7 @@
+[workspace]
+members = ["crates/*"]
+exclude = [
+  "wasm/crates/wasm-basic",
+  "wasm/crates/wasi-basic",
+  "wasm/crates/wapc-guest-test",
+]

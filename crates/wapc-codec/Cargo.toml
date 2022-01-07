@@ -1,0 +1,27 @@
+[package]
+name = "wapc-codec"
+version = "0.1.0"
+authors = ["Jarrod Overson <jsoverson@gmail.com>"]
+edition = "2021"
+description = "A standard implementation of MessagePack serialization and deserialization for waPC communication"
+license = "Apache-2.0"
+homepage = "https://wapc.io"
+documentation = "https://docs.rs/wapc-codec-messagepack"
+readme = "README.md"
+keywords = ["sdk", "wapc", "webassembly", "wasm", "wasi"]
+categories = ["wasm", "api-bindings"]
+
+[badges.maintenance]
+status = "actively-developed"
+
+[features]
+default = ["messagepack"]
+messagepack = ["rmp-serde"]
+
+[dependencies]
+thiserror = "1.0"
+serde = "1.0"
+rmp-serde = { version = "0.15", optional = true }
+
+[dev-dependencies]
+serde = { version = "1.0", features = ["derive"] }
