@@ -1,13 +1,13 @@
 pub(crate) mod modulestate;
 pub(crate) mod traits;
 
+use std::cell::RefCell;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::{cell::RefCell, sync::Arc};
-
-use crate::{errors, HostCallback, Invocation};
+use std::sync::Arc;
 
 use self::modulestate::ModuleState;
 use self::traits::WebAssemblyEngineProvider;
+use crate::{errors, HostCallback, Invocation};
 
 static GLOBAL_MODULE_COUNT: AtomicU64 = AtomicU64::new(1);
 
@@ -27,19 +27,14 @@ pub struct WapcHost {
 
 impl std::fmt::Debug for WapcHost {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("WapcHost")
-      .field("state", &self.state)
-      .finish()
+    f.debug_struct("WapcHost").field("state", &self.state).finish()
   }
 }
 
 impl WapcHost {
   /// Creates a new instance of a waPC-compliant host runtime paired with a given
   /// low-level engine provider
-  pub fn new(
-    engine: Box<dyn WebAssemblyEngineProvider>,
-    host_callback: Option<Box<HostCallback>>,
-  ) -> Result<Self> {
+  pub fn new(engine: Box<dyn WebAssemblyEngineProvider>, host_callback: Option<Box<HostCallback>>) -> Result<Self> {
     let id = GLOBAL_MODULE_COUNT.fetch_add(1, Ordering::SeqCst);
 
     let state = Arc::new(ModuleState::new(host_callback, id));

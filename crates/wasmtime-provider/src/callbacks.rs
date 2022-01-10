@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use wapc::ModuleState;
-use wasmtime::{
-  AsContext, AsContextMut, Caller, Func, FuncType, Memory, StoreContext, Val, ValType,
-};
+use wasmtime::{AsContext, AsContextMut, Caller, Func, FuncType, Memory, StoreContext, Val, ValType};
 
 pub(crate) fn guest_request_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
   let callback_type = FuncType::new(vec![ValType::I32, ValType::I32], vec![]);
@@ -15,12 +13,7 @@ pub(crate) fn guest_request_func(store: impl AsContextMut, host: Arc<ModuleState
     let memory = get_caller_memory(&mut caller);
     if let Some(inv) = invocation {
       write_bytes_to_memory(caller.as_context(), memory, ptr.unwrap(), &inv.msg);
-      write_bytes_to_memory(
-        caller.as_context(),
-        memory,
-        op_ptr.unwrap(),
-        inv.operation.as_bytes(),
-      );
+      write_bytes_to_memory(caller.as_context(), memory, op_ptr.unwrap(), inv.operation.as_bytes());
     }
     Ok(())
   })
@@ -82,26 +75,11 @@ pub(crate) fn host_call_func(store: impl AsContextMut, host: Arc<ModuleState>) -
       let len = params[7].i32();
 
       let vec = get_vec_from_memory(caller.as_context(), memory, ptr.unwrap(), len.unwrap());
-      let bd_vec = get_vec_from_memory(
-        caller.as_context(),
-        memory,
-        bd_ptr.unwrap(),
-        bd_len.unwrap(),
-      );
+      let bd_vec = get_vec_from_memory(caller.as_context(), memory, bd_ptr.unwrap(), bd_len.unwrap());
       let bd = std::str::from_utf8(&bd_vec).unwrap();
-      let ns_vec = get_vec_from_memory(
-        caller.as_context(),
-        memory,
-        ns_ptr.unwrap(),
-        ns_len.unwrap(),
-      );
+      let ns_vec = get_vec_from_memory(caller.as_context(), memory, ns_ptr.unwrap(), ns_len.unwrap());
       let ns = std::str::from_utf8(&ns_vec).unwrap();
-      let op_vec = get_vec_from_memory(
-        caller.as_context(),
-        memory,
-        op_ptr.unwrap(),
-        op_len.unwrap(),
-      );
+      let op_vec = get_vec_from_memory(caller.as_context(), memory, op_ptr.unwrap(), op_len.unwrap());
       let op = std::str::from_utf8(&op_vec).unwrap();
       //trace!("Guest {} invoking host operation", id, op);
       let result = host.do_host_call(bd, ns, op, &vec);
@@ -210,23 +188,13 @@ pub(crate) fn host_error_len_func(store: impl AsContextMut, host: Arc<ModuleStat
 }
 
 fn get_caller_memory<T>(caller: &mut Caller<T>) -> Memory {
-  let memory = caller
-    .get_export("memory")
-    .map(|e| e.into_memory().unwrap());
+  let memory = caller.get_export("memory").map(|e| e.into_memory().unwrap());
   memory.unwrap()
 }
 
-fn get_vec_from_memory<'a, T: 'a>(
-  store: impl Into<StoreContext<'a, T>>,
-  mem: Memory,
-  ptr: i32,
-  len: i32,
-) -> Vec<u8> {
+fn get_vec_from_memory<'a, T: 'a>(store: impl Into<StoreContext<'a, T>>, mem: Memory, ptr: i32, len: i32) -> Vec<u8> {
   let data = mem.data(store);
-  data[ptr as usize..(ptr + len) as usize]
-    .iter()
-    .copied()
-    .collect()
+  data[ptr as usize..(ptr + len) as usize].iter().copied().collect()
 }
 
 fn write_bytes_to_memory(store: impl AsContext, memory: Memory, ptr: i32, slice: &[u8]) {

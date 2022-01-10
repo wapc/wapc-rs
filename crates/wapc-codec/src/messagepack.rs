@@ -33,25 +33,24 @@ use std::io::Cursor;
 use rmp_serde::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 
+use crate::errors;
+
 /// [`serialize()`] serializes a structure into MessagePack bytes.
-pub fn serialize<T>(item: T) -> ::std::result::Result<Vec<u8>, Box<dyn ::std::error::Error>>
+pub fn serialize<T>(item: T) -> Result<Vec<u8>, errors::Error>
 where
   T: Serialize,
 {
   let mut buf = Vec::new();
-  item.serialize(&mut Serializer::new(&mut buf).with_struct_map())?;
+  item
+    .serialize(&mut Serializer::new(&mut buf).with_struct_map())
+    .map_err(|e| errors::new(errors::ErrorKind::MessagePackSerialization(e)))?;
   Ok(buf)
 }
 
 /// [`deserialize()`] converts a MessagePack-formatted list of bytes into the target data structure.
-pub fn deserialize<'de, T: Deserialize<'de>>(
-  buf: &[u8],
-) -> ::std::result::Result<T, Box<dyn ::std::error::Error>> {
+pub fn deserialize<'de, T: Deserialize<'de>>(buf: &[u8]) -> Result<T, errors::Error> {
   let mut de = Deserializer::new(Cursor::new(buf));
-  match Deserialize::deserialize(&mut de) {
-    Ok(t) => Ok(t),
-    Err(e) => Err(format!("Failed to de-serialize: {}", e).into()),
-  }
+  Deserialize::deserialize(&mut de).map_err(|e| errors::new(errors::ErrorKind::MessagePackDeserialization(e)))
 }
 
 #[cfg(test)]

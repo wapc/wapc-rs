@@ -33,10 +33,7 @@ pub(crate) fn compute_preopen_dirs(
   }
 
   for (guest, host) in map_dirs.iter() {
-    preopen_dirs.push((
-      guest.clone(),
-      Dir::open_ambient_dir(host, ambient_authority)?,
-    ));
+    preopen_dirs.push((guest.clone(), Dir::open_ambient_dir(host, ambient_authority)?));
   }
 
   Ok(preopen_dirs)

@@ -42,6 +42,15 @@ $(TEST_WASM_WASM):
 .PHONY: wasm
 wasm: $(WAPC_GUEST_WASM) $(TEST_WASI_WASM) $(TEST_WASM_WASM)
 
+.PHONY: check
+check:
+	cargo +nightly fmt --check
+	cargo clippy
+
+.PHONY: tidy
+tidy:
+	cargo +nightly fmt
+
 .PHONY: test
 test: wasm
 	cargo test --workspace

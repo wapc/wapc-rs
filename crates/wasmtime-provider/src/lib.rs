@@ -87,10 +87,7 @@ pub mod errors;
 
 use parking_lot::RwLock;
 use wapc::{wapc_functions, ModuleState, WasiParams, WebAssemblyEngineProvider, HOST_NAMESPACE};
-
-use wasmtime::{
-  AsContextMut, Engine, Extern, ExternType, Instance, Linker, Module, Store, TypedFunc,
-};
+use wasmtime::{AsContextMut, Engine, Extern, ExternType, Instance, Linker, Module, Store, TypedFunc};
 #[cfg(feature = "wasi")]
 use wasmtime_wasi::WasiCtx;
 
@@ -296,10 +293,7 @@ impl WasmtimeEngineProvider {
         .read()
         .get_export(&mut self.store, starter)
       {
-        ext
-          .into_func()
-          .unwrap()
-          .call(&mut self.store, &[], &mut [])?;
+        ext.into_func().unwrap().call(&mut self.store, &[], &mut [])?;
       }
     }
     Ok(())
@@ -356,11 +350,7 @@ fn arrange_imports(
       .filter_map(|imp| {
         if let ExternType::Func(_) = imp.ty() {
           match imp.module() {
-            HOST_NAMESPACE => Some(callback_for_import(
-              store.as_context_mut(),
-              imp.name()?,
-              host.clone(),
-            )),
+            HOST_NAMESPACE => Some(callback_for_import(store.as_context_mut(), imp.name()?, host.clone())),
             WASI_SNAPSHOT_PREVIEW1_NAMESPACE | WASI_UNSTABLE_NAMESPACE => {
               linker.get_by_import(store.as_context_mut(), &imp)
             }
@@ -391,10 +381,7 @@ fn callback_for_import(store: impl AsContextMut, import: &str, host: Arc<ModuleS
 
 // Called once, then the result is cached. This returns a `Func` that corresponds
 // to the `__guest_call` export
-fn guest_call_fn(
-  store: impl AsContextMut,
-  instance: &Arc<RwLock<Instance>>,
-) -> Result<TypedFunc<(i32, i32), i32>> {
+fn guest_call_fn(store: impl AsContextMut, instance: &Arc<RwLock<Instance>>) -> Result<TypedFunc<(i32, i32), i32>> {
   instance
     .read()
     .get_typed_func::<(i32, i32), i32, _>(store, wapc_functions::GUEST_CALL)

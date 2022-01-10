@@ -1,16 +1,14 @@
 use std::fs::read;
 
-use wapc::{errors::Error, WapcHost};
+use wapc::errors::Error;
+use wapc::WapcHost;
 
 fn create_guest(path: &str) -> Result<WapcHost, Error> {
   let buf = read(path)?;
 
   let engine = wasm3_provider::Wasm3EngineProvider::new(&buf);
 
-  WapcHost::new(
-    Box::new(engine),
-    Some(Box::new(move |_a, _b, _c, _d, _e| Ok(vec![]))),
-  )
+  WapcHost::new(Box::new(engine), Some(Box::new(move |_a, _b, _c, _d, _e| Ok(vec![]))))
 }
 
 #[test]

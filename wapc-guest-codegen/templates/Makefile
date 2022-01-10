@@ -4,10 +4,7 @@ all: deps codegen build
 
 deps:
 
-codegen.yaml:
-	sed "s#\$$PWD#$${PWD}#g" codegen.yaml.tmpl > codegen.yaml
-
-codegen: codegen.yaml
+codegen:
 	wapc generate codegen.yaml
 
 build:
@@ -18,7 +15,6 @@ build:
 # so running `make clean` should be done periodically.
 clean:
 	cargo clean
-	rm codegen.yaml
 	rm -Rf build
 
 doc:

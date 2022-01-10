@@ -1,5 +1,5 @@
 /// Parameters defining the options for enabling WASI on a module (if applicable)
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
 #[must_use]
 pub struct WasiParams {
   /// Command line arguments to expose to WASI.

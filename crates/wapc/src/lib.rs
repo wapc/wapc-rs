@@ -100,10 +100,9 @@ pub use wapchost::traits::{ModuleHost, WebAssemblyEngineProvider};
 pub use wapchost::WapcHost;
 pub use wasi::WasiParams;
 
-type HostCallback = dyn Fn(u64, &str, &str, &str, &[u8]) -> Result<Vec<u8>, Box<dyn Error + Send + Sync>>
-  + Sync
-  + Send
-  + 'static;
+/// The signature of a Host Callback function.
+pub type HostCallback =
+  dyn Fn(u64, &str, &str, &str, &[u8]) -> Result<Vec<u8>, Box<dyn Error + Send + Sync>> + Sync + Send + 'static;
 
 #[derive(Debug, Clone)]
 /// Represents a waPC invocation, which is a combination of an operation string and the

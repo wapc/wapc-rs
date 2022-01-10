@@ -1,6 +1,8 @@
-use std::{error::Error, sync::Arc};
+use std::error::Error;
+use std::sync::Arc;
 
-use crate::{wapchost::modulestate::ModuleState, Invocation};
+use crate::wapchost::modulestate::ModuleState;
+use crate::Invocation;
 
 /// The module host (waPC) must provide an implementation of this trait to the engine provider
 /// to enable waPC function calls.

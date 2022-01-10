@@ -1,5 +1,4 @@
 use wapc_guest::HandlerResult;
-
 mod generated;
 
 #[no_mangle]

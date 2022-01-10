@@ -142,16 +142,7 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
       HOST_NAMESPACE,
       wapc_functions::HOST_CALL,
       move |ctx: CallContext,
-            (bd_ptr, bd_len, ns_ptr, ns_len, op_ptr, op_len, ptr, len): (
-        i32,
-        i32,
-        i32,
-        i32,
-        i32,
-        i32,
-        i32,
-        i32,
-      )|
+            (bd_ptr, bd_len, ns_ptr, ns_len, op_ptr, op_len, ptr, len): (i32, i32, i32, i32, i32, i32, i32, i32)|
             -> Result<i32, Trap> {
         Ok(callbacks::host_call(
           &ctx, bd_ptr, bd_len, ns_ptr, ns_len, op_ptr, op_len, ptr, len, &h,
@@ -202,9 +193,7 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
     if let Err(_e) = module.link_closure(
       HOST_NAMESPACE,
       wapc_functions::HOST_RESPONSE_LEN_FN,
-      move |ctx: CallContext, ()| -> Result<i32, Trap> {
-        Ok(callbacks::host_response_length(&ctx, &h))
-      },
+      move |ctx: CallContext, ()| -> Result<i32, Trap> { Ok(callbacks::host_response_length(&ctx, &h)) },
     ) {
       warn!("Module did not import __host_response_len");
     }
@@ -276,10 +265,7 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
       let func = module.find_function::<(), ()>(starter);
       if let Ok(func) = func {
         if let Err(e) = func.call() {
-          error!(
-            "Failed during invocation of starter function '{}': {}.",
-            starter, e
-          );
+          error!("Failed during invocation of starter function '{}': {}.", starter, e);
           return Err(format!("Failed during starter initialization '{}': {}", starter, e).into());
         }
       }
@@ -290,11 +276,7 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
     Ok(())
   }
 
-  fn call(
-    &mut self,
-    op_length: i32,
-    msg_length: i32,
-  ) -> Result<i32, Box<dyn Error + Send + Sync + 'static>> {
+  fn call(&mut self, op_length: i32, msg_length: i32) -> Result<i32, Box<dyn Error + Send + Sync + 'static>> {
     if let Some(ref i) = self.inner {
       let func = i
         .rt

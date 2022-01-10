@@ -79,6 +79,8 @@
 #![doc(html_logo_url = "https://avatars0.githubusercontent.com/u/54989751?s=200&v=4")]
 #![doc = include_str!("../README.md")]
 
+pub mod errors;
+
 #[cfg(feature = "messagepack")]
 /// The messagepack implementation
 pub mod messagepack;

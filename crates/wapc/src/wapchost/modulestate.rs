@@ -106,10 +106,7 @@ impl std::fmt::Debug for ModuleState {
       .field("host_response", &self.host_response)
       .field("guest_error", &self.guest_error)
       .field("host_error", &self.host_error)
-      .field(
-        "host_callback",
-        &self.host_callback.as_ref().map(|_| Some("Some(Fn)")),
-      )
+      .field("host_callback", &self.host_callback.as_ref().map(|_| Some("Some(Fn)")))
       .field("id", &self.id)
       .finish()
   }
