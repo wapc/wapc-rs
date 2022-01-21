@@ -1,42 +1,46 @@
 # Wasm3 Engine Provider
 
-This is a pluggable engine provider for the [waPC](https://github.com/wapc) RPC exchange protocol. This engine encapsulates 
-the [wasm3](https://github.com/wasm3) C-based, interpreted WebAssembly runtime.
+![crates.io](https://img.shields.io/crates/v/wasm3-provider.svg)
+![license](https://img.shields.io/crates/l/wasm3-provider.svg)
 
-To run the demo:
-```
-cargo run --example demo -- ./.assets/hello.wasm test
+This is a pluggable engine provider for the [waPC](https://wapc.io) RPC exchange protocol. This engine implements `WebAssemblyEngineProvider` for the [wasm3](https://github.com/wasm3) C-based, interpreted WebAssembly runtime.
+
+## Running the demo
+
+```ignore
+$ cargo run -p wasm3-provider --example wasm3-demo ./wasm/crates/wasm-basic/build/wasm_basic.wasm ping "hi"
 ```
 
-An example of using this engine provider:
+## Example
+
 ```rust
-pub fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    env_logger::init();
-    
-    let module_bytes = load_file(&std::env::args().skip(1).next().unwrap());
-    let engine = Wasm3EngineProvider::new(&module_bytes);
-    let host = WapcHost::new(Box::new(engine), host_callback)?;
-    let func = std::env::args().skip(2).next().unwrap();
+use wasm3_provider::Wasm3EngineProvider;
+use wapc::WapcHost;
+use std::error::Error;
 
-    let _res = host.call(&func, b"this is a test")?;
-    Ok(())
-}
+pub fn main() -> Result<(), Box<dyn Error>> {
 
-fn host_callback(
-    id: u64,
-    bd: &str,
-    ns: &str,
-    op: &str,
-    payload: &[u8],
-) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-    println!(
-        "Guest {} invoked '{}->{}:{}' with payload of {}",
-        id,
-        bd,
-        ns,
-        op,
-        ::std::str::from_utf8(payload).unwrap()
-    );
+  // Sample host callback that prints the operation a WASM module requested.
+  let host_callback = |id: u64, bd: &str, ns: &str, op: &str, payload: &[u8]| {
+    println!("Guest {} invoked '{}->{}:{}' with a {} byte payload",
+    id, bd, ns, op, payload.len());
+    // Return success with zero-byte payload.
     Ok(vec![])
+  };
+
+  let file = "../../wasm/crates/wasm-basic/build/wasm_basic.wasm";
+  let module_bytes = std::fs::read(file)?;
+
+  let engine = Wasm3EngineProvider::new(&module_bytes);
+  let host = WapcHost::new(Box::new(engine), Some(Box::new(host_callback)))?;
+
+  let res = host.call("ping", b"payload bytes")?;
+  assert_eq!(res, b"payload bytes");
+
+  Ok(())
 }
 ```
+
+## See also
+
+- [wasmtime-provider](https://crates.io/crates/wasmtime-provider)

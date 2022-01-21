@@ -1,0 +1,13 @@
+schema: schema.widl
+generates:
+  src/generated.rs:
+    # This needs a template until https://github.com/wapc/cli/issues/9
+    # is resolved
+    module: "/home/jsoverson/development/src/wapc-rs/wasm/crates/wapc-guest-test/../../../wapc-guest-codegen/dist"
+    visitorClass: ModuleVisitor
+  src/lib.rs:
+    ifNotExists: true
+    module: "/home/jsoverson/development/src/wapc-rs/wasm/crates/wapc-guest-test/../../../wapc-guest-codegen/dist"
+    visitorClass: ScaffoldVisitor
+    config:
+      use: generated

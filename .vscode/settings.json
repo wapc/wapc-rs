@@ -1,0 +1,18 @@
+{
+  "git.ignoreLimitWarning": true,
+  "rust-analyzer.cargo.features": [
+    "wasmtime-provider/cache",
+    "wasmtime-provider/wasi",
+    "wapc-codec/messagepack"
+  ],
+  "rust-analyzer.rustfmt.overrideCommand": [
+    "rustup",
+    "run",
+    "nightly",
+    "--",
+    "rustfmt",
+    "--edition",
+    "2021",
+    "--"
+  ]
+}

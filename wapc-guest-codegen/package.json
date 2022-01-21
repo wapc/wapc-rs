@@ -1,0 +1,70 @@
+{
+  "name": "@wapc/codegen-rust-guest",
+  "version": "0.0.7",
+  "description": "Flexible code generation using WIDL",
+  "keywords": [
+    "webassembly",
+    "wasm",
+    "wapc",
+    "widl",
+    "codegen"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://www.github.com/wapc/wapc-rs"
+  },
+  "author": "Phil Kedy",
+  "license": "Apache-2.0",
+  "licenses": [
+    {
+      "type": "Apache-2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ],
+  "engines": {
+    "node": ">=8.5"
+  },
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "browser": "./dist/standalone.js",
+  "browser-min": "./dist/standalone.min.js",
+  "exports": {
+    ".": "./dist/cjs/index.js",
+    "./assemblyscript": "./dist/cjs/assemblyscript/index.js",
+    "./go": "./dist/cjs/go/index.js",
+    "./rust": "./dist/cjs/rust/index.js",
+    "./tinygo": "./dist/cjs/tinygo/index.js",
+    "./utils": "./dist/cjs/utils/index.js"
+  },
+  "files": [
+    "templates",
+    "dist",
+    "README.md",
+    "test",
+    "src",
+    "docs"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "prebuild": "npm run clean",
+    "build": "tsc --declaration --declarationMap",
+    "watch": "tsc -w --declaration",
+    "clean": "rimraf dist",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,scss,sass,less,md}\"",
+    "lint": "eslint -c ./config/.eslintrc.json src --ext .ts",
+    "prerelease": "npm run build"
+  },
+  "dependencies": {
+    "@wapc/widl": "0.0.6"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.22.0",
+    "@typescript-eslint/parser": "^4.22.0",
+    "eslint": "^7.22.0",
+    "prettier": "^2.2.1",
+    "rimraf": "^3.0.2",
+    "tslib": "^2.1.0",
+    "typescript": "4.1.3"
+  }
+}

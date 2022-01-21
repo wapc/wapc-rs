@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "module": "CommonJS",
+    "target": "es2020",
+    "lib": ["es2020"],
+    "outDir": "dist/",
+    "baseUrl": ".",
+    "paths": {
+      "@wapc/widl": ["node_modules/@wapc/widl/dist/types"],
+      "@wapc/widl/*": ["node_modules/@wapc/widl/dist/types/*"]
+    },
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
+    "stripInternal": true,
+    "importHelpers": true,
+    "plugins": [
+      {
+        "name": "typescript-tslint-plugin",
+        "alwaysShowRuleFailuresAsWarnings": false
+      }
+    ]
+  },
+  "include": ["./src"],
+  "compileOnSave": false
+}

@@ -1,0 +1,16 @@
+[package]
+name = "wasi-basic"
+version = "0.1.0"
+authors = ["Jarrod Overson <jsoverson@gmail.com>"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wapc-guest = { path = "../../../crates/wapc-guest" }
+
+[profile.release]
+# Optimize for small code size
+opt-level = "s"
+lto = true

@@ -1,21 +1,32 @@
 [package]
 name = "wasm3-provider"
 version = "0.0.3"
-authors = ["Kevin Hoffman <alothien@gmail.com>"]
-edition = "2018"
-exclude = [".assets"]
+authors = [
+  "Kevin Hoffman <alothien@gmail.com>",
+  "Jarrod Overson <jsoverson@gmail.com>",
+  "Phil Kedy <phil.kedy@gmail.com>",
+]
+edition = "2021"
 description = "A wasm3 engine provider for the waPC host"
 license = "Apache-2.0"
-homepage = "https://github.com/wapc/wasm3-provider"
+homepage = "https://wapc.io"
 documentation = "https://docs.rs/wasm3-provider"
 readme = "README.md"
 keywords = ["sdk", "wapc", "webassembly", "wasm", "wasm3"]
 categories = ["wasm", "api-bindings"]
 
+[badges.maintenance]
+status = "actively-developed"
+
 [dependencies]
-wapc = "0.10.1"
+wapc = { path = "../wapc" }
 wasm3 = { version = "0.3.1", features = ["build-bindgen"] }
 log = "0.4.11"
+thiserror = "1.0"
+parking_lot = "0.11"
+once_cell = "1.9"
+
 
 [dev-dependencies]
+wapc-codec = { path = "../wapc-codec" }
 env_logger = "0.9.0"
