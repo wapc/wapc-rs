@@ -1,0 +1,35 @@
+[package]
+name = "wapc-pool"
+version = "0.1.0"
+authors = ["Jarrod Overson <jsoverson@gmail.com>"]
+edition = "2021"
+description = "A multithreaded pool of waPC hosts"
+license = "Apache-2.0"
+homepage = "https://wapc.io"
+documentation = "https://docs.rs/wapc-pool"
+readme = "README.md"
+keywords = ["sdk", "wapc", "webassembly", "wasm", "wasi"]
+categories = ["wasm", "api-bindings"]
+
+[package.metadata.workspaces]
+independent = true
+
+[badges.maintenance]
+status = "actively-developed"
+
+[dependencies]
+wapc = { path = "../wapc" }
+log = "0.4"
+thiserror = "1.0"
+rusty_pool = "0.6"
+crossbeam = "0.8"
+tokio = { version = "1", features = ["sync"] }
+
+[dev-dependencies]
+futures = "0.3"
+tokio = { version = "1", features = ["full"] }
+test-log = "0.2"
+env_logger = "0.9"
+wasmtime-provider = { path = "../wasmtime-provider" }
+wapc-codec = { path = "../wapc-codec" }
+anyhow = "1.0"
