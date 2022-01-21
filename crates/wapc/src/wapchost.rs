@@ -52,10 +52,7 @@ impl WapcHost {
   fn initialize(&self, state: Arc<ModuleState>) -> Result<()> {
     match self.engine.borrow_mut().init(state) {
       Ok(_) => Ok(()),
-      Err(e) => Err(errors::Error::GuestCallFailure(format!(
-        "Failed to initialize guest module: {}",
-        e
-      ))),
+      Err(e) => Err(errors::Error::InitFailed(e.to_string())),
     }
   }
 
@@ -75,20 +72,18 @@ impl WapcHost {
   /// might be due to lazy initialization or JIT-compilation.
   pub fn call(&self, op: &str, payload: &[u8]) -> Result<Vec<u8>> {
     let inv = Invocation::new(op, payload.to_vec());
+    let op_len = inv.operation.len();
+    let msg_len = inv.msg.len();
 
     {
       *self.state.guest_response.write() = None;
-      *self.state.guest_request.write() = Some(inv.clone());
+      *self.state.guest_request.write() = Some(inv);
       *self.state.guest_error.write() = None;
       *self.state.host_response.write() = None;
       *self.state.host_error.write() = None;
     }
 
-    let callresult = match self
-      .engine
-      .borrow_mut()
-      .call(inv.operation.len() as i32, inv.msg.len() as i32)
-    {
+    let callresult = match self.engine.borrow_mut().call(op_len as i32, msg_len as i32) {
       Ok(c) => c,
       Err(e) => {
         return Err(errors::Error::GuestCallFailure(e.to_string()));

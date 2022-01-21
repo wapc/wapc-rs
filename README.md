@@ -19,7 +19,7 @@ For more information about waPC, see [https://wapc.io]()
 
 This code sets up a waPC host using the wasmtime WebAssembly engine. It loads a waPC guest WebAssembly module created by the waPC CLI and executes the operation "echo" with the `string` payload `"hello world"`.
 
-```rs
+```rust
 use std::fs::read;
 
 use wapc::{errors, WapcHost};
@@ -52,6 +52,10 @@ The `wapc-guest` crate is used for Rust projects that will compile down to WebAs
 The `wapc` crate is for projects that want to run waPC WebAssembly modules. It contains the `WebAssemblyEngineProvider` trait which is used by the following projects to provide compatible implementations across multiple WebAssembly engines.
 
 A full waPC host requires `wapc` combined with one of the WebAssembly engine providers below.
+
+### wapc-pool [![Crates badge](https://img.shields.io/crates/v/wapc-pool.svg)](https://crates.io/crates/wapc-pool)
+
+The `wapc-pool` crate is an elastic threadpool for WapcHosts. You provide a `WapcHost` generator function and `wapc-pool` takes care of scaling and limiting worker threads.
 
 ### wasmtime-provider [![Crates badge](https://img.shields.io/crates/v/wasmtime-provider.svg)](https://crates.io/crates/wasmtime-provider)
 
