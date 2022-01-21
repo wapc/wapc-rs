@@ -3,8 +3,16 @@ name: CI
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - "*.md"
+      - "LICENSE"
+      - "*.wasm"
   pull_request:
     branches: [master]
+    paths-ignore:
+      - "*.md"
+      - "LICENSE"
+      - "*.wasm"
   workflow_call:
 
 jobs:
@@ -13,6 +21,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt
       - name: lint
         run: make check
       - name: test

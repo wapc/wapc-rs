@@ -1,5 +1,5 @@
 {
-  "name": "@wapc/widl-codegen",
+  "name": "@wapc/codegen-rust-guest",
   "version": "0.0.7",
   "description": "Flexible code generation using WIDL",
   "keywords": [
@@ -11,7 +11,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://www.github.com/wapc/widl-codegen-js"
+    "url": "https://www.github.com/wapc/wapc-rs"
   },
   "author": "Phil Kedy",
   "license": "Apache-2.0",
