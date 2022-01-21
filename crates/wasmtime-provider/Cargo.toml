@@ -27,7 +27,7 @@ cache = ["wasmtime/cache"]
 wasi = ["wasi-common", "wasi-cap-std-sync", "wasmtime-wasi"]
 
 [dependencies]
-wapc = { path = "../wapc" }
+wapc = { path = "../wapc", version = "1.0.0-alpha.0" }
 log = "0.4"
 wasmtime = "0.33.0"
 thiserror = "1.0"
