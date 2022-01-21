@@ -13,7 +13,7 @@ For more information about waPC, see [https://wapc.io]()
 [actions-url]: https://github.com/wapc/wapc-rs/actions?query=workflow%3ACI+branch%3Amaster
 
 [Website](https://wapc.io) |
-[Docs and Tutorials](https://wapc.io/docs/) |
+[Docs and Tutorials](https://wapc.io/docs/)
 
 ## Example
 
@@ -25,8 +25,7 @@ use std::fs::read;
 use wapc::{errors, WapcHost};
 use wapc_codec::messagepack::{deserialize, serialize};
 
-#[test]
-fn runs_wapc_guest() -> Result<(), errors::Error> {
+fn main() -> Result<(), errors::Error> {
     let buf = read("../wapc-guest-test/build/wapc_guest_test.wasm")?;
 
     let engine = wasmtime_provider::WasmtimeEngineProvider::new(&buf, None)?;
@@ -44,23 +43,17 @@ fn runs_wapc_guest() -> Result<(), errors::Error> {
 
 ## Projects
 
-### `wapc-guest`
-
-[![Crates badge][https://img.shields.io/crates/v/wapc-guest.svg]][https://crates.io/crates/wapc-guest]
+### wapc-guest [![Crates badge](https://img.shields.io/crates/v/wapc-guest.svg)](https://crates.io/crates/wapc-guest)
 
 The `wapc-guest` crate is used for Rust projects that will compile down to WebAssembly. It's typically used by code generated from the [`wapc`](https://github.com/wapc/cli) CLI tool.
 
-### `wapc` (host)
-
-[![Crates badge][https://img.shields.io/crates/v/wapc.svg]][https://crates.io/crates/wapc]
+### wapc (host) [![Crates badge](https://img.shields.io/crates/v/wapc.svg)](https://crates.io/crates/wapc)
 
 The `wapc` crate is for projects that want to run waPC WebAssembly modules. It contains the `WebAssemblyEngineProvider` trait which is used by the following projects to provide compatible implementations across multiple WebAssembly engines.
 
 A full waPC host requires `wapc` combined with one of the WebAssembly engine providers below.
 
-### `wasmtime-provider`
-
-[![Crates badge][https://img.shields.io/crates/v/wasmtime-provider.svg]][https://crates.io/crates/wasmtime-provider]
+### wasmtime-provider [![Crates badge](https://img.shields.io/crates/v/wasmtime-provider.svg)](https://crates.io/crates/wasmtime-provider)
 
 The `wasmtime-provider` crate implements the `WebAssemblyEngineProvider` trait for the wasmtime engine.
 
@@ -70,9 +63,7 @@ The `wasmtime-provider` crate implements the `WebAssemblyEngineProvider` trait f
 $ cargo run -p wasmtime-provider --example wasmtime-demo ./wasm/crates/wasm-basic/build/wasm_basic.wasm ping "hi"
 ```
 
-### `wasm3-provider`
-
-[![Crates badge][https://img.shields.io/crates/v/wasm3-provider.svg]][https://crates.io/crates/wasm3-provider]
+### wasm3-provider [![Crates badge](https://img.shields.io/crates/v/wasm3-provider.svg)](https://crates.io/crates/wasm3-provider)
 
 The `wasm3-provider` crate implements the `WebAssemblyEngineProvider` trait for the wasm3 engine.
 
@@ -82,9 +73,9 @@ The `wasm3-provider` crate implements the `WebAssemblyEngineProvider` trait for 
 $ cargo run -p wasm3-provider --example wasm3-demo ./wasm/crates/wasm-basic/build/wasm_basic.wasm ping "hi"
 ```
 
-### `wapc-codec`
+### wapc-codec
 
-[![Crates badge][https://img.shields.io/crates/v/wapc-codec.svg]][https://crates.io/crates/wapc-codec]
+[![Crates badge](https://img.shields.io/crates/v/wapc-codec.svg)](https://crates.io/crates/wapc-codec)
 
 The `wapc-codec` crate exposes compatible serialization and deserialization methods for sending data in and out of WASM modules.
 
@@ -94,9 +85,9 @@ The `wapc-codec` crate exposes compatible serialization and deserialization meth
 $ cargo run -p wapc-codec --example roundtrip
 ```
 
-### `wapc-guest-codegen`
+### wapc-guest-codegen
 
-[![Npm badge][https://img.shields.io/npm/v/@wapc/codegen-rust-guest]][https://www.npmjs.com/package/@wapc/codegen-rust-guest]
+[![Npm badge](https://img.shields.io/npm/v/@wapc/codegen-rust-guest)](https://www.npmjs.com/package/@wapc/codegen-rust-guest)
 
 The `wapc-guest-codegen` project includes the JavaScript source that the `wapc` CLI uses to generate code for Rust guests.
 

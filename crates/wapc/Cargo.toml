@@ -15,6 +15,9 @@ readme = "README.md"
 keywords = ["sdk", "wapc", "webassembly", "wasm", "wasi"]
 categories = ["wasm", "api-bindings"]
 
+[package.metadata.workspaces]
+independent = true
+
 [dependencies]
 log = "0.4"
 parking_lot = "0.11"

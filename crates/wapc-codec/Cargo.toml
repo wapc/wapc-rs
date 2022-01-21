@@ -11,6 +11,9 @@ readme = "README.md"
 keywords = ["sdk", "wapc", "webassembly", "wasm", "wasi"]
 categories = ["wasm", "api-bindings"]
 
+[package.metadata.workspaces]
+independent = true
+
 [badges.maintenance]
 status = "actively-developed"
 
