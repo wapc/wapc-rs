@@ -1,6 +1,6 @@
 [package]
 name = "wapc-pool"
-version = "1.0.0-alpha.0"
+version = "1.0.0"
 authors = ["Jarrod Overson <jsoverson@gmail.com>"]
 edition = "2021"
 description = "A multithreaded pool of waPC hosts"
