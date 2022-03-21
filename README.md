@@ -6,6 +6,7 @@ For more information about waPC, see [https://wapc.io]()
 
 [![Apache 2.0 licensed][license]][license-url]
 [![Build Status][actions-badge]][actions-url]
+[![Gitter](https://badges.gitter.im/wapc/community.svg)](https://gitter.im/wapc/community)
 
 [license]: https://img.shields.io/github/license/wapc/wapc-rs
 [license-url]: https://github.com/wapc/wapc-rs/blob/master/LICENSE
