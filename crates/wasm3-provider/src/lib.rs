@@ -136,7 +136,7 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
     let module = Module::parse(&env, bytes.as_ref()).to_wapc()?;
 
     let mut module = rt.load_module(module).to_wapc()?;
-
+    module.link_wasi().to_wapc()?;
     let h = host.clone();
     if let Err(_e) = module.link_closure(
       HOST_NAMESPACE,
