@@ -194,7 +194,7 @@ fn get_caller_memory<T>(caller: &mut Caller<T>) -> Memory {
 
 fn get_vec_from_memory<'a, T: 'a>(store: impl Into<StoreContext<'a, T>>, mem: Memory, ptr: i32, len: i32) -> Vec<u8> {
   let data = mem.data(store);
-  data[ptr as usize..(ptr + len) as usize].iter().copied().collect()
+  data[ptr as usize..(ptr + len) as usize].to_vec()
 }
 
 fn write_bytes_to_memory(store: impl AsContext, memory: Memory, ptr: i32, slice: &[u8]) {
