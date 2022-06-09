@@ -350,7 +350,7 @@ fn arrange_imports(
       .filter_map(|imp| {
         if let ExternType::Func(_) = imp.ty() {
           match imp.module() {
-            HOST_NAMESPACE => Some(callback_for_import(store.as_context_mut(), imp.name()?, host.clone())),
+            HOST_NAMESPACE => Some(callback_for_import(store.as_context_mut(), imp.name(), host.clone())),
             WASI_SNAPSHOT_PREVIEW1_NAMESPACE | WASI_UNSTABLE_NAMESPACE => {
               linker.get_by_import(store.as_context_mut(), &imp)
             }
