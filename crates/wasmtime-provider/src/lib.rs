@@ -87,8 +87,12 @@ pub mod errors;
 
 use parking_lot::RwLock;
 use wapc::{wapc_functions, ModuleState, WasiParams, WebAssemblyEngineProvider, HOST_NAMESPACE};
+// export wasmtime and wasmtime_wasi, so that consumers of this crate can use
+// the very same version
+pub use wasmtime;
 use wasmtime::{AsContextMut, Engine, Extern, ExternType, Instance, Linker, Module, Store, TypedFunc};
 #[cfg(feature = "wasi")]
+pub use wasmtime_wasi;
 use wasmtime_wasi::WasiCtx;
 
 // namespace needed for some language support
