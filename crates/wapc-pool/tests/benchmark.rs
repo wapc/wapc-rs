@@ -70,23 +70,12 @@ async fn benchmark() -> Result<(), errors::Error> {
     assert_eq!(result, format!("hello world: {}", i));
   }
 
-  let within_expectations = duration_all < expected_max + buffer;
   println!(
     "Expecting {} calls to take around {}μs - {}μs",
     num_calls,
     expected_max.as_micros(),
     (expected_max + buffer).as_micros()
   );
-
-  // This test is dependent on system load. It's not reliable but that's OK.
-  // It's meant for local testing and profiling.
-  if std::env::var("CI").is_ok() && !within_expectations {
-    // If we're on CI, just print.
-    log::warn!("Tests did not fall within expectations");
-  } else {
-    // If we're anywhere else, make a proper assertion.
-    assert!(within_expectations);
-  }
 
   Ok(())
 }
