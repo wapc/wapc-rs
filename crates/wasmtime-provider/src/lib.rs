@@ -187,7 +187,7 @@ impl WasmtimeEngineProvider {
     cache_path: Option<&std::path::Path>,
   ) -> Result<WasmtimeEngineProvider> {
     let mut config = wasmtime::Config::new();
-    config.strategy(wasmtime::Strategy::Cranelift)?;
+    config.strategy(wasmtime::Strategy::Cranelift);
     if let Some(cache) = cache_path {
       config.cache_config_load(cache)?;
     } else if let Err(e) = config.cache_config_load_default() {
@@ -199,11 +199,11 @@ impl WasmtimeEngineProvider {
 
   /// Creates a new instance of a [WasmtimeEngineProvider] from a separately created [wasmtime::Engine].
   pub fn new_with_engine(buf: &[u8], engine: Engine, wasi: Option<WasiParams>) -> Result<Self> {
-    let mut linker: Linker<WapcStore> = Linker::new(&engine);
     let module = Module::new(&engine, buf)?;
 
     cfg_if::cfg_if! {
       if #[cfg(feature = "wasi")] {
+        let mut linker: Linker<WapcStore> = Linker::new(&engine);
         wasmtime_wasi::add_to_linker(&mut linker, |s| &mut s.wasi_ctx).unwrap();
         let wasi_params = wasi.unwrap_or_default();
         let wasi_ctx = wasi::init_ctx(
@@ -215,6 +215,14 @@ impl WasmtimeEngineProvider {
         .unwrap();
         let store = Store::new(&engine, WapcStore { wasi_ctx });
       } else {
+        if wasi.is_some() {
+            // this check is required because otherwise the `wasi` parameter
+            // would not be used when the feature `wasi` is not enabled.
+            // That would cause a compilation error because we do not allow unused
+            // code.
+            return Err(errors::Error::WasiDisabled);
+        }
+        let linker: Linker<WapcStore> = Linker::new(&engine);
         let store = Store::new(&engine, WapcStore {});
       }
     };

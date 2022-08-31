@@ -4,12 +4,16 @@ pub enum Error {
   /// WASMTime initialization failed
   #[error("Initialization failed: {0}")]
   InitializationFailed(Box<dyn std::error::Error + Send + Sync>),
+
   /// The guest call function was not exported by the guest.
   #[error("Guest call function (__guest_call) not exported by wasm module.")]
   GuestCallNotFound,
   /// Error originating from [wasi_common]
   #[error("{0}")]
   WasiError(#[from] wasi_common::Error),
+  /// Error originating when wasi feature is disabled, but the user provides wasi related params
+  #[error("WASI related parameter provided, but wasi feature is disabled")]
+  WasiDisabled,
 }
 
 impl From<Error> for wapc::errors::Error {
