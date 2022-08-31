@@ -8,12 +8,15 @@ pub enum Error {
   /// The guest call function was not exported by the guest.
   #[error("Guest call function (__guest_call) not exported by wasm module.")]
   GuestCallNotFound,
-  /// Error originating from [wasi_common]
-  #[error("{0}")]
-  WasiError(#[from] wasi_common::Error),
+
   /// Error originating when wasi feature is disabled, but the user provides wasi related params
   #[error("WASI related parameter provided, but wasi feature is disabled")]
   WasiDisabled,
+
+  /// Generic error
+  // wasmtime uses `anyhow::Error` inside of its public API
+  #[error(transparent)]
+  Generic(#[from] anyhow::Error),
 }
 
 impl From<Error> for wapc::errors::Error {

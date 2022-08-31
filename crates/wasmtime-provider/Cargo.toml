@@ -30,6 +30,7 @@ wasi = ["wasi-common", "wasi-cap-std-sync", "wasmtime-wasi"]
 wapc = { path = "../wapc", version = "1.0.0" }
 log = "0.4"
 wasmtime = "0.40.0"
+anyhow = "1.0"
 thiserror = "1.0"
 cfg-if = "1.0.0"
 parking_lot = "0.11"
