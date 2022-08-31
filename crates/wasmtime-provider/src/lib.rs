@@ -91,9 +91,13 @@ use wapc::{wapc_functions, ModuleState, WasiParams, WebAssemblyEngineProvider, H
 // the very same version
 pub use wasmtime;
 use wasmtime::{AsContextMut, Engine, Extern, ExternType, Instance, Linker, Module, Store, TypedFunc};
-#[cfg(feature = "wasi")]
-pub use wasmtime_wasi;
-use wasmtime_wasi::WasiCtx;
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "wasi")] {
+        pub use wasmtime_wasi;
+        use wasmtime_wasi::WasiCtx;
+    }
+}
 
 // namespace needed for some language support
 const WASI_UNSTABLE_NAMESPACE: &str = "wasi_unstable";
