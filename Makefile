@@ -15,6 +15,8 @@ TEST_WASM_DIR=$(WASM_PROJECT_DIR)/wasm-basic/
 TEST_WASM_WASM=$(TEST_WASM_DIR)/build/wasm_basic.wasm
 TEST_WASI_DIR=$(WASM_PROJECT_DIR)/wasi-basic/
 TEST_WASI_WASM=$(TEST_WASI_DIR)/build/wasi_basic.wasm
+TEST_WAPC_TIMEOUT_DIR=$(WASM_PROJECT_DIR)/wapc-guest-timeout/
+TEST_WAPC_TIMEOUT_WASM=$(TEST_WASI_DIR)/build/wapc_guest_timeout.wasm
 
 .PHONY: all
 all: build
@@ -25,6 +27,7 @@ clean:
 	$(MAKE) -C $(WAPC_GUEST_DIR) clean
 	$(MAKE) -C $(TEST_WASM_DIR) clean
 	$(MAKE) -C $(TEST_WASI_DIR) clean
+	$(MAKE) -C $(TEST_WAPC_TIMEOUT_DIR) clean
 
 .PHONY: build
 build:
@@ -39,8 +42,11 @@ $(TEST_WASI_WASM):
 $(TEST_WASM_WASM):
 	$(MAKE) -C $(TEST_WASM_DIR)
 
+$(TEST_WAPC_TIMEOUT_WASM):
+	$(MAKE) -C $(TEST_WAPC_TIMEOUT_DIR)
+
 .PHONY: wasm
-wasm: $(WAPC_GUEST_WASM) $(TEST_WASI_WASM) $(TEST_WASM_WASM)
+wasm: $(WAPC_GUEST_WASM) $(TEST_WASI_WASM) $(TEST_WASM_WASM) $(TEST_WAPC_TIMEOUT_WASM)
 
 .PHONY: check
 check:

@@ -7,13 +7,17 @@ fn create_guest(path: &str) -> Result<WapcHost, Error> {
   let buf = read(path)?;
   cfg_if::cfg_if! {
     if #[cfg(feature = "cache")] {
-      let engine =
-      wasmtime_provider::WasmtimeEngineProvider::new_with_cache(&buf, None, None).unwrap();
+        let builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new(&buf).enable_cache(None);
     } else {
-      let engine =
-      wasmtime_provider::WasmtimeEngineProvider::new(&buf, None).unwrap();
+        let builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new(&buf);
     }
   }
+  let engine = builder.build().expect("Cannot create WebAssemblyEngineProvider");
+  WapcHost::new(Box::new(engine), Some(Box::new(move |_a, _b, _c, _d, _e| Ok(vec![]))))
+}
+
+fn create_guest_from_builder(builder: &wasmtime_provider::WasmtimeEngineProviderBuilder) -> Result<WapcHost, Error> {
+  let engine = builder.build().expect("Cannot create WebAssemblyEngineProvider");
   WapcHost::new(Box::new(engine), Some(Box::new(move |_a, _b, _c, _d, _e| Ok(vec![]))))
 }
 
@@ -56,6 +60,45 @@ fn runs_hello_tinygo() -> Result<(), Error> {
   let callresult = guest.call("hello", b"this is a test")?;
   let result = String::from_utf8_lossy(&callresult);
   assert_eq!(result, "Hello");
+  Ok(())
+}
+
+#[test]
+#[cfg(feature = "wasi")]
+fn runs_wapc_timeout() -> Result<(), Error> {
+  let path = "../../wasm/crates/wapc-guest-timeout/build/wapc_guest_timeout.wasm";
+  let module_bytes = read(path)?;
+  let wapc_init_deadline = 100;
+  let wapc_func_deadline = 2;
+
+  let mut engine_conf = wasmtime::Config::default();
+  engine_conf.epoch_interruption(true);
+  let engine = wasmtime::Engine::new(&engine_conf).expect("cannot create wasmtime engine");
+
+  let wapc_engine_builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new(&module_bytes)
+    .engine(engine.clone())
+    .enable_epoch_interruptions(wapc_init_deadline, wapc_func_deadline);
+  let guest = create_guest_from_builder(&wapc_engine_builder)?;
+
+  std::thread::spawn(move || {
+    // Starting timer thread
+    let interval = std::time::Duration::from_secs(1);
+    loop {
+      std::thread::sleep(interval);
+      engine.increment_epoch();
+    }
+  });
+
+  let callresult = guest.call("sleep", b"1")?;
+  let result = String::from_utf8_lossy(&callresult);
+  assert_eq!(result, "slept for 1 seconds");
+
+  let callresult = guest.call("sleep", b"10");
+  let err = callresult.err().expect("a timeout error was supposed to happen");
+  assert_eq!(
+    err.to_string(),
+    "Guest call failure: guest code interrupted, execution deadline exceeded".to_string()
+  );
   Ok(())
 }
 

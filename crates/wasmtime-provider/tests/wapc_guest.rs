@@ -7,7 +7,7 @@ use wapc_codec::messagepack::{deserialize, serialize};
 fn runs_wapc_guest() -> Result<(), errors::Error> {
   let buf = read("../../wasm/crates/wapc-guest-test/build/wapc_guest_test.wasm")?;
 
-  let engine = wasmtime_provider::WasmtimeEngineProvider::new(&buf, None)?;
+  let engine = wasmtime_provider::WasmtimeEngineProviderBuilder::new(&buf).build()?;
   let guest = WapcHost::new(Box::new(engine), Some(Box::new(move |_a, _b, _c, _d, _e| Ok(vec![]))))?;
 
   let callresult = guest.call("echo", &serialize("hello world").unwrap())?;
