@@ -1,9 +1,18 @@
+/// A convenience wrapper of `Result` that relies on
+/// [`wasmtime_provider::errors::Error`](crate::errors::Error)
+/// to hold errors
+pub(crate) type Result<T> = std::result::Result<T, Error>;
+
 /// This crate's Error type
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-  /// WASMTime initialization failed
+  /// Wasmtime initialization failed
   #[error("Initialization failed: {0}")]
   InitializationFailed(Box<dyn std::error::Error + Send + Sync>),
+
+  /// Wasmtime initialization failed
+  #[error("Initialization failed: {0} init interrupted, execution deadline exceeded")]
+  InitializationFailedTimeout(String),
 
   /// The guest call function was not exported by the guest.
   #[error("Guest call function (__guest_call) not exported by wasm module.")]
