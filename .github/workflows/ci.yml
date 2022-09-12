@@ -25,6 +25,7 @@ jobs:
         with:
           toolchain: nightly
           components: rustfmt
+          target: wasm32-wasi
       - name: lint
         run: make check
       - name: test
