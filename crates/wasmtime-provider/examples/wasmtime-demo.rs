@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use wapc::WapcHost;
-use wasmtime_provider::WasmtimeEngineProvider;
+use wasmtime_provider::WasmtimeEngineProviderBuilder;
 
 pub fn main() -> Result<(), wapc::errors::Error> {
   env_logger::init();
@@ -17,7 +17,7 @@ pub fn main() -> Result<(), wapc::errors::Error> {
     .expect("The string payload to send should be passed as the third CLI parameter");
 
   let module_bytes = std::fs::read(file).expect("WASM could not be read");
-  let engine = WasmtimeEngineProvider::new(&module_bytes, None)?;
+  let engine = WasmtimeEngineProviderBuilder::new(&module_bytes).build()?;
 
   let host = WapcHost::new(Box::new(engine), Some(Box::new(host_callback)))?;
 

@@ -4,4 +4,5 @@ exclude = [
   "wasm/crates/wasm-basic",
   "wasm/crates/wasi-basic",
   "wasm/crates/wapc-guest-test",
+  "wasm/crates/wapc-guest-timeout",
 ]

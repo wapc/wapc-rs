@@ -14,7 +14,7 @@ async fn benchmark() -> Result<(), errors::Error> {
   let num_threads: u32 = 10;
   let num_calls: u32 = 100;
 
-  let engine = wasmtime_provider::WasmtimeEngineProvider::new(&buf, None)?;
+  let engine = wasmtime_provider::WasmtimeEngineProviderBuilder::new(&buf).build()?;
   let pool = HostPoolBuilder::new()
     .name("wasmtime-test")
     .factory(move || {
