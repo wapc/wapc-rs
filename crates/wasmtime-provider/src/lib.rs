@@ -84,7 +84,10 @@ mod wasi;
 
 /// The crate's error module
 pub mod errors;
+use errors::{Error, Result};
 
+mod builder;
+pub use builder::WasmtimeEngineProviderBuilder;
 use parking_lot::RwLock;
 use wapc::{wapc_functions, ModuleState, WasiParams, WebAssemblyEngineProvider, HOST_NAMESPACE};
 // export wasmtime and wasmtime_wasi, so that consumers of this crate can use
@@ -108,8 +111,6 @@ use std::sync::Arc;
 #[macro_use]
 extern crate log;
 
-type Result<T> = std::result::Result<T, errors::Error>;
-
 struct EngineInner {
   instance: Arc<RwLock<Instance>>,
   guest_call_fn: TypedFunc<(i32, i32), i32>,
@@ -119,6 +120,22 @@ struct EngineInner {
 struct WapcStore {
   #[cfg(feature = "wasi")]
   wasi_ctx: WasiCtx,
+}
+
+/// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
+///
+/// There are two kind of deadlines that apply to waPC modules:
+///
+/// * waPC initialization code: this is the code defined by the module inside
+///   of the `wapc_init` or the `_start` functions
+/// * user function: the actual waPC guest function written by an user
+#[derive(Clone, Copy, Debug)]
+struct EpochDeadlines {
+  /// Deadline for waPC initialization code. Expressed in number of epoch ticks
+  wapc_init: u64,
+
+  /// Deadline for user-defined waPC function computation. Expressed in number of epoch ticks
+  wapc_func: u64,
 }
 
 /// A waPC engine provider that encapsulates the Wasmtime WebAssembly runtime
@@ -131,6 +148,7 @@ pub struct WasmtimeEngineProvider {
   store: Store<WapcStore>,
   engine: Engine,
   linker: Linker<WapcStore>,
+  epoch_deadlines: Option<EpochDeadlines>,
 }
 
 impl Clone for WasmtimeEngineProvider {
@@ -152,6 +170,7 @@ impl Clone for WasmtimeEngineProvider {
           inner: None,
           store,
           engine,
+          epoch_deadlines: self.epoch_deadlines,
           linker: self.linker.clone(),
           #[cfg(feature = "wasi")]
           wasi_params: self.wasi_params.clone(),
@@ -164,6 +183,7 @@ impl Clone for WasmtimeEngineProvider {
         inner: None,
         store,
         engine,
+        epoch_deadlines: self.epoch_deadlines,
         linker: self.linker.clone(),
         #[cfg(feature = "wasi")]
         wasi_params: self.wasi_params.clone(),
@@ -174,13 +194,23 @@ impl Clone for WasmtimeEngineProvider {
 
 impl WasmtimeEngineProvider {
   /// Creates a new instance of a [WasmtimeEngineProvider].
+  #[deprecated(
+    since = "1.2.0",
+    note = "please use `WasmtimeEngineProviderBuilder` instead to create a `WasmtimeEngineProvider`"
+  )]
+  #[allow(deprecated)]
   pub fn new(buf: &[u8], wasi: Option<WasiParams>) -> Result<WasmtimeEngineProvider> {
     let engine = Engine::default();
     Self::new_with_engine(buf, engine, wasi)
   }
 
   #[cfg(feature = "cache")]
+  #[allow(deprecated)]
   /// Creates a new instance of a [WasmtimeEngineProvider] with caching enabled.
+  #[deprecated(
+    since = "1.2.0",
+    note = "please use `WasmtimeEngineProviderBuilder` instead to create a `WasmtimeEngineProvider`"
+  )]
   pub fn new_with_cache(
     buf: &[u8],
     wasi: Option<WasiParams>,
@@ -198,6 +228,10 @@ impl WasmtimeEngineProvider {
   }
 
   /// Creates a new instance of a [WasmtimeEngineProvider] from a separately created [wasmtime::Engine].
+  #[deprecated(
+    since = "1.2.0",
+    note = "please use `WasmtimeEngineProviderBuilder` instead to create a `WasmtimeEngineProvider`"
+  )]
   pub fn new_with_engine(buf: &[u8], engine: Engine, wasi: Option<WasiParams>) -> Result<Self> {
     let module = Module::new(&engine, buf)?;
 
@@ -235,6 +269,7 @@ impl WasmtimeEngineProvider {
       store,
       engine,
       linker,
+      epoch_deadlines: None,
     })
   }
 }
@@ -261,6 +296,11 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
     op_length: i32,
     msg_length: i32,
   ) -> std::result::Result<i32, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    if let Some(deadlines) = &self.epoch_deadlines {
+      // the deadline counter must be set before invoking the wasm function
+      self.store.set_epoch_deadline(deadlines.wapc_func);
+    }
+
     let engine_inner = self.inner.as_ref().unwrap();
     let call = engine_inner
       .guest_call_fn
@@ -268,9 +308,15 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
 
     match call {
       Ok(result) => Ok(result),
-      Err(e) => {
-        error!("Failure invoking guest module handler: {:?}", e);
-        engine_inner.host.set_guest_error(e.to_string());
+      Err(trap) => {
+        error!("Failure invoking guest module handler: {:?}", trap);
+        let mut guest_error = trap.to_string();
+        if let Some(trap_code) = trap.trap_code() {
+          if matches!(trap_code, wasmtime::TrapCode::Interrupt) {
+            guest_error = "guest code interrupted, execution deadline exceeded".to_owned();
+          }
+        }
+        engine_inner.host.set_guest_error(guest_error);
         Ok(0)
       }
     }
@@ -301,15 +347,34 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
 impl WasmtimeEngineProvider {
   fn initialize(&mut self) -> Result<()> {
     for starter in wapc::wapc_functions::REQUIRED_STARTS.iter() {
-      if let Some(ext) = self
-        .inner
-        .as_ref()
-        .unwrap()
+      if let Some(deadlines) = &self.epoch_deadlines {
+        // the deadline counter must be set before invoking the wasm function
+        self.store.set_epoch_deadline(deadlines.wapc_init);
+      }
+
+      let engine_inner = self.inner.as_ref().unwrap();
+      if engine_inner
         .instance
         .read()
         .get_export(&mut self.store, starter)
+        .is_some()
       {
-        ext.into_func().unwrap().call(&mut self.store, &[], &mut [])?;
+        // Need to get a `wasmtime::TypedFunc` because its `call` method
+        // can return a Trap error. Non-typed functions instead return a
+        // generic `anyhow::Error` that doesn't allow nice handling of
+        // errors
+        let starter_func: TypedFunc<(), ()> = engine_inner.instance.read().get_typed_func(&mut self.store, starter)?;
+        starter_func.call(&mut self.store, ()).map_err(|trap| {
+          if let Some(trap_code) = trap.trap_code() {
+            if matches!(trap_code, wasmtime::TrapCode::Interrupt) {
+              Error::InitializationFailedTimeout((*starter).to_owned())
+            } else {
+              Error::InitializationFailed(trap.into())
+            }
+          } else {
+            Error::InitializationFailed(trap.into())
+          }
+        })?;
       }
     }
     Ok(())
