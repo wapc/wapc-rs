@@ -1,22 +1,17 @@
-import { Context, Writer, BaseVisitor } from "@wapc/widl/ast";
+import { Context, Writer, BaseVisitor } from "@apexlang/core/model";
 import { shouldIncludeHandler } from "./utils";
-import {
-  defaultValueForType,
-  expandType,
-  functionName,
-  isReference,
-  isVoid,
-  mapArgs,
-} from "./helpers";
+import { functionName, mapArgs } from "./helpers";
+import utils from "@apexlang/codegen/utils";
+import { utils as rustUtils } from "@apexlang/codegen/rust";
 
 export class ScaffoldVisitor extends BaseVisitor {
   constructor(writer: Writer) {
     super(writer);
   }
 
-  visitDocumentBefore(context: Context): void {
+  visitContextBefore(context: Context): void {
     const useName = context.config["use"] || "generated";
-    super.visitDocumentBefore(context);
+    super.visitContextBefore(context);
     this.write(`mod ${useName};
 use wapc_guest::prelude::*;
 pub use ${useName}::*;\n\n`);
@@ -24,7 +19,7 @@ pub use ${useName}::*;\n\n`);
 
   visitAllOperationsBefore(context: Context): void {
     const registration = new HandlerRegistrationVisitor(this.writer);
-    context.document!.accept(context, registration);
+    context.accept(context, registration);
   }
 
   visitOperation(context: Context): void {
@@ -34,26 +29,22 @@ pub use ${useName}::*;\n\n`);
     const operation = context.operation!;
     this.write(`\n`);
     this.write(
-      `fn ${functionName(operation.name.value)}(${mapArgs(
+      `fn ${functionName(operation.name)}(${mapArgs(
         operation.parameters,
+        context.config,
         true
       )}) -> HandlerResult<`
     );
-    if (!isVoid(operation.type)) {
+    if (!utils.isVoid(operation.type)) {
       this.write(
-        expandType(
-          operation.type,
-          undefined,
-          true,
-          isReference(operation.annotations)
-        )
+        rustUtils.types.apexToRustType(operation.type, context.config)
       );
     } else {
       this.write(`()`);
     }
     this.write(`> {\n`);
-    if (!isVoid(operation.type)) {
-      const dv = defaultValueForType(operation.type, undefined);
+    if (!utils.isVoid(operation.type)) {
+      const dv = rustUtils.types.defaultValue(operation.type, context.config);
       this.write(`    Ok(${dv})`);
     } else {
       this.write(`    Ok(())`);
@@ -79,9 +70,9 @@ pub fn wapc_init() {\n`);
     }
     const operation = context.operation!;
     this.write(
-      `    Handlers::register_${functionName(
-        operation.name.value
-      )}(${functionName(operation.name.value)});\n`
+      `    Handlers::register_${functionName(operation.name)}(${functionName(
+        operation.name
+      )});\n`
     );
   }
 

@@ -1,6 +1,8 @@
-import { Context, Writer, BaseVisitor } from "@wapc/widl/ast";
-import { expandType, isReference, functionName, isVoid } from "./helpers";
+import { Context, Writer, BaseVisitor } from "@apexlang/core/model";
+import { functionName } from "./helpers";
 import { formatComment, shouldIncludeHandler } from "./utils";
+import * as utils from "@apexlang/codegen/utils";
+import { utils as rustUtils } from "@apexlang/codegen/rust";
 
 export class HandlersVisitor extends BaseVisitor {
   constructor(writer: Writer) {
@@ -13,37 +15,33 @@ export class HandlersVisitor extends BaseVisitor {
     }
     if (context.config.handlerPreamble != true) {
       const className = context.config.handlersClassName || "Handlers";
-      this.write(`#[cfg(feature = "guest")]
+      this.write(`
+#[cfg(feature = "guest")]
 pub struct ${className} {}
 
 #[cfg(feature = "guest")]
-impl ${className} {\n`);
+impl ${className} {
+`);
       context.config.handlerPreamble = true;
     }
     const operation = context.operation!;
     this.write(formatComment("    /// ", operation.description));
-    const opName = operation.name.value;
-    const fnName = functionName(operation.name.value);
+    const opName = operation.name;
+    const fnName = functionName(operation.name);
     const paramTypes = operation.parameters
       .map((param) =>
-        expandType(param.type, undefined, true, isReference(param.annotations))
+        rustUtils.types.apexToRustType(param.type, context.config)
       )
       .join(",");
-    const returnType = isVoid(operation.type)
+    const returnType = utils.isVoid(operation)
       ? "()"
-      : expandType(
-          operation.type,
-          undefined,
-          true,
-          isReference(operation.annotations)
-        );
+      : rustUtils.types.apexToRustType(operation.type, context.config);
 
-    this.write(
-      `pub fn register_${fnName}(f: fn(${paramTypes}) -> HandlerResult<${returnType}>) {
-        *${fnName.toUpperCase()}.write().unwrap() = Some(f);
-        register_function(&"${opName}", ${fnName}_wrapper);
-      }`
-    );
+    this.write(`
+pub fn register_${fnName}(f: fn(${paramTypes}) -> HandlerResult<${returnType}>) {
+  *${fnName.toUpperCase()}.write().unwrap() = Some(f);
+  register_function("${opName}", ${fnName}_wrapper);
+}`);
     super.triggerOperation(context);
   }
 

@@ -1,0 +1,6 @@
+namespace "example:interface"
+
+interface wapc {
+  echo[input:string]: string
+}
+

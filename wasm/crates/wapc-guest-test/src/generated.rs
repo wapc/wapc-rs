@@ -38,11 +38,7 @@ impl Host {
       "echo",
       &messagepack::serialize(input)?,
     )
-    .map(|vec| {
-      let resp = messagepack::deserialize::<String>(vec.as_ref()).unwrap();
-      resp
-    })
-    .map_err(|e| e.into())
+    .map(|vec| messagepack::deserialize::<String>(vec.as_ref()).unwrap())
   }
 }
 
@@ -53,7 +49,7 @@ pub struct Handlers {}
 impl Handlers {
   pub fn register_echo(f: fn(String) -> HandlerResult<String>) {
     *ECHO.write().unwrap() = Some(f);
-    register_function(&"echo", echo_wrapper);
+    register_function("echo", echo_wrapper);
   }
 }
 

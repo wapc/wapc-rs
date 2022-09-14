@@ -1,5 +1,4 @@
 Cargo.lock
 target
-codegen.yaml
 dist
 node_modules

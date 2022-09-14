@@ -1,41 +1,16 @@
 {
-  "name": "@wapc/codegen-rust-guest",
-  "version": "0.0.7",
-  "description": "Flexible code generation using WIDL",
+  "name": "y",
+  "version": "0.0.1",
+  "description": "Generator for waPC projects in Rust",
   "keywords": [
-    "webassembly",
-    "wasm",
-    "wapc",
-    "widl",
+    "apex",
     "codegen"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://www.github.com/wapc/wapc-rs"
-  },
-  "author": "Phil Kedy",
-  "license": "Apache-2.0",
-  "licenses": [
-    {
-      "type": "Apache-2.0",
-      "url": "http://www.apache.org/licenses/LICENSE-2.0"
-    }
-  ],
-  "engines": {
-    "node": ">=8.5"
-  },
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/types/index.d.ts",
-  "browser": "./dist/standalone.js",
-  "browser-min": "./dist/standalone.min.js",
+  "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/cjs/index.js",
-    "./assemblyscript": "./dist/cjs/assemblyscript/index.js",
-    "./go": "./dist/cjs/go/index.js",
-    "./rust": "./dist/cjs/rust/index.js",
-    "./tinygo": "./dist/cjs/tinygo/index.js",
-    "./utils": "./dist/cjs/utils/index.js"
+    ".": "./dist/index.js"
   },
   "files": [
     "templates",
@@ -43,28 +18,35 @@
     "README.md",
     "test",
     "src",
-    "docs"
+    "docs",
+    "definitions",
+    "templates"
   ],
   "sideEffects": false,
   "scripts": {
     "prebuild": "npm run clean",
-    "build": "tsc --declaration --declarationMap",
-    "watch": "tsc -w --declaration",
-    "clean": "rimraf dist",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,scss,sass,less,md}\"",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "clean": "shx rm -rf dist",
+    "test": "echo todo",
+    "style": "npm run format -- --list-different && npm run lint",
+    "style:fix": "npm run format:fix && npm run lint:fix",
+    "format": "prettier \"src/**/*.{ts,tsx,js,jsx,css,scss,sass,less,md}\"",
+    "format:fix": "npm run format -- --write",
     "lint": "eslint -c ./config/.eslintrc.json src --ext .ts",
+    "lint:fix": "npm run lint -- --fix",
     "prerelease": "npm run build"
   },
   "dependencies": {
-    "@wapc/widl": "0.0.6"
+    "@apexlang/codegen": "^0.0.7",
+    "@apexlang/core": "^0.1.0"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.22.0",
     "@typescript-eslint/parser": "^4.22.0",
     "eslint": "^7.22.0",
     "prettier": "^2.2.1",
-    "rimraf": "^3.0.2",
-    "tslib": "^2.1.0",
-    "typescript": "4.1.3"
+    "shx": "0.3.3",
+    "typescript": "^4.5.5"
   }
 }

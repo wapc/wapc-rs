@@ -1,0 +1,19 @@
+spec: schema.apexlang
+generates:
+  src/generated.rs:
+    module: ../../../wapc-guest-codegen/src/index.ts
+    visitorClass: IntegrationVisitor
+    config:
+      serde: true
+  src/lib.rs:
+    ifNotExists: true
+    module: ../../../wapc-guest-codegen/src/index.ts
+    visitorClass: ScaffoldVisitor
+    config:
+      use: generated
+      derive:
+        _all:
+          - Debug
+          - PartialEq
+          - Default
+          - Clone
