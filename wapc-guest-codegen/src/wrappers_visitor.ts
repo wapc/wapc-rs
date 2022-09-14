@@ -1,13 +1,8 @@
-import { Context, Writer, BaseVisitor } from "@wapc/widl/ast";
-import {
-  expandType,
-  isReference,
-  capitalize,
-  isVoid,
-  varAccessArg,
-  functionName,
-} from "./helpers";
+import { Context, Writer, BaseVisitor } from "@apexlang/core/model";
+import { varAccessArg, functionName } from "./helpers";
 import { shouldIncludeHandler } from "./utils";
+import * as utils from "@apexlang/codegen/utils";
+import { utils as rustUtils } from "@apexlang/codegen/rust";
 
 export class WrapperVarsVisitor extends BaseVisitor {
   constructor(writer: Writer) {
@@ -19,26 +14,21 @@ export class WrapperVarsVisitor extends BaseVisitor {
       return;
     }
     const operation = context.operation!;
-    const fnName = functionName(operation.name.value).toUpperCase();
+    const fnName = functionName(operation.name).toUpperCase();
     const paramTypes = operation.parameters
       .map((param) =>
-        expandType(param.type, undefined, true, isReference(param.annotations))
+        rustUtils.types.apexToRustType(param.type, context.config)
       )
       .join(",");
-    const returnType = isVoid(operation.type)
+    const returnType = utils.isVoid(operation.type)
       ? "()"
-      : expandType(
-          operation.type,
-          undefined,
-          true,
-          isReference(operation.annotations)
-        );
+      : rustUtils.types.apexToRustType(operation.type, context.config);
 
     this.write(`
-        #[cfg(feature = "guest")]
-        static ${fnName}: once_cell::sync::Lazy<std::sync::RwLock<Option<fn(${paramTypes}) -> HandlerResult<${returnType}>>>> =
-          once_cell::sync::Lazy::new(|| std::sync::RwLock::new(None));
-        `);
+#[cfg(feature = "guest")]
+static ${fnName}: once_cell::sync::Lazy<std::sync::RwLock<Option<fn(${paramTypes}) -> HandlerResult<${returnType}>>>> =
+  once_cell::sync::Lazy::new(|| std::sync::RwLock::new(None));
+`);
   }
 
   visitAllOperationsAfter(context: Context): void {
@@ -59,30 +49,28 @@ export class WrapperFuncsVisitor extends BaseVisitor {
       return;
     }
     const operation = context.operation!;
-    const fnName = functionName(operation.name.value);
+    const fnName = functionName(operation.name);
     let inputType = "",
       inputArgs = "";
     if (operation.isUnary()) {
-      inputType = expandType(
+      inputType = rustUtils.types.apexToRustType(
         operation.unaryOp().type,
-        undefined,
-        false,
-        isReference(operation.annotations)
+        context.config
       );
       inputArgs = "input";
     } else {
-      inputType = `${capitalize(operation.name.value)}Args`;
+      inputType = `${rustUtils.rustifyCaps(operation.name)}Args`;
       inputArgs = varAccessArg("input", operation.parameters);
     }
 
     this.write(`
-      #[cfg(feature = "guest")]
-      fn ${fnName}_wrapper(input_payload: &[u8]) -> CallResult {
-        let input = messagepack::deserialize::<${inputType}>(input_payload)?;
-        let lock = ${fnName.toUpperCase()}.read().unwrap().unwrap();
-        let result = lock(${inputArgs})?;
-        Ok(messagepack::serialize(result)?)
-      }`);
+#[cfg(feature = "guest")]
+fn ${fnName}_wrapper(input_payload: &[u8]) -> CallResult {
+  let input = messagepack::deserialize::<${inputType}>(input_payload)?;
+  let lock = ${fnName.toUpperCase()}.read().unwrap().unwrap();
+  let result = lock(${inputArgs})?;
+  Ok(messagepack::serialize(result)?)
+}`);
   }
 
   visitWrapperBeforeReturn(context: Context): void {

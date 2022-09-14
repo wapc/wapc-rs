@@ -1,19 +1,23 @@
 {
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"],
   "compilerOptions": {
-    "moduleResolution": "node",
-    "module": "CommonJS",
-    "target": "es2020",
-    "lib": ["es2020"],
-    "outDir": "dist/",
-    "baseUrl": ".",
-    "paths": {
-      "@wapc/widl": ["node_modules/@wapc/widl/dist/types"],
-      "@wapc/widl/*": ["node_modules/@wapc/widl/dist/types/*"]
-    },
-    "strict": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "sourceMap": true,
+    "target": "ES2020" /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', 'ES2018', 'ES2019', 'ES2020', or 'ESNEXT'. */,
+    "module": "ES2020" /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', 'es2020', or 'ESNext'. */,
+    "lib": [
+      "es2020",
+      "dom"
+    ] /* Specify library files to be included in the compilation. */,
+    "declaration": true /* Generates corresponding '.d.ts' file. */,
+    "declarationMap": true /* Generates a sourcemap for each corresponding '.d.ts' file. */,
+    "sourceMap": true /* Generates corresponding '.map' file. */,
+    "outDir": "./dist" /* Redirect output structure to the directory. */,
+    "rootDir": "./src" /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */,
+    "strict": true /* Enable all strict type-checking options. */,
+    "moduleResolution": "node" /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */,
+    "typeRoots": ["./types", "./node_modules/@types"],
+    "esModuleInterop": true /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */,
+    "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */,
     "stripInternal": true,
     "importHelpers": true,
     "plugins": [
@@ -23,6 +27,5 @@
       }
     ]
   },
-  "include": ["./src"],
   "compileOnSave": false
 }

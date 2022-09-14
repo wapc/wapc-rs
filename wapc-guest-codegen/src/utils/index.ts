@@ -1,4 +1,4 @@
-import { Context, StringValue } from "@wapc/widl/ast";
+import { Context, StringValue } from "@apexlang/core/model";
 
 export function shouldIncludeHostCall(context: Context): boolean {
   let roles = context.config.hostRoles as Array<String>;
