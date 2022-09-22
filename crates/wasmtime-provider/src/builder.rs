@@ -6,7 +6,8 @@ use crate::WasmtimeEngineProvider;
 #[derive(Default)]
 pub struct WasmtimeEngineProviderBuilder<'a> {
   engine: Option<wasmtime::Engine>,
-  module_bytes: &'a [u8],
+  module: Option<wasmtime::Module>,
+  module_bytes: Option<&'a [u8]>,
   #[cfg(feature = "cache")]
   cache_enabled: bool,
   #[cfg(feature = "cache")]
@@ -17,14 +18,28 @@ pub struct WasmtimeEngineProviderBuilder<'a> {
 
 #[allow(deprecated)]
 impl<'a> WasmtimeEngineProviderBuilder<'a> {
-  /// A new WasmtimeEngineProviderBuilder instance,
-  /// must provide the wasm module to be loaded
+  /// Create a builder instance
   #[must_use]
-  pub fn new(module_bytes: &'a [u8]) -> Self {
-    WasmtimeEngineProviderBuilder {
-      module_bytes,
-      ..Default::default()
-    }
+  pub fn new() -> Self {
+    Default::default()
+  }
+
+  /// Provide contents of the WebAssembly module
+  #[must_use]
+  pub fn module_bytes(mut self, module_bytes: &'a [u8]) -> Self {
+    self.module_bytes = Some(module_bytes);
+    self
+  }
+
+  /// Provide a preloaded [`wasmtime::Module`]
+  ///
+  /// **Warning:** the [`wasmtime::Engine`] used to load it must be provided via the
+  /// [`WasmtimeEngineProviderBuilder::engine`] method, otherwise the code
+  /// will panic at runtime later.
+  #[must_use]
+  pub fn module(mut self, module: wasmtime::Module) -> Self {
+    self.module = Some(module);
+    self
   }
 
   /// Provide a preinitialized [`wasmtime::Engine`]
