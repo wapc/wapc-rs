@@ -219,10 +219,10 @@ impl WasmtimeEngineProvider {
     let mut config = wasmtime::Config::new();
     config.strategy(wasmtime::Strategy::Cranelift);
     if let Some(cache) = cache_path {
-      config.cache_config_load(cache)?;
-    } else if let Err(e) = config.cache_config_load_default() {
-      warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
-    }
+      config.cache_config_load(cache)
+    } else {
+      config.cache_config_load_default()
+    }?;
     let engine = Engine::new(&config)?;
     Self::new_with_engine(buf, engine, wasi)
   }
