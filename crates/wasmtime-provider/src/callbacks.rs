@@ -1,195 +1,280 @@
-use std::sync::Arc;
+use wapc::{wapc_functions, HOST_NAMESPACE};
+use wasmtime::{AsContext, Caller, Linker, Memory, StoreContext, Trap};
 
-use wapc::ModuleState;
-use wasmtime::{AsContext, AsContextMut, Caller, Func, FuncType, Memory, StoreContext, Val, ValType};
+use crate::errors::{Error, Result};
+use crate::WapcStore;
 
-pub(crate) fn guest_request_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
-  let callback_type = FuncType::new(vec![ValType::I32, ValType::I32], vec![]);
-  Func::new(store, callback_type, move |mut caller, params, _results| {
-    let op_ptr = params[0].i32();
-    let ptr = params[1].i32();
+pub(crate) fn add_to_linker(linker: &mut Linker<WapcStore>) -> Result<()> {
+  register_guest_request_func(linker)?;
+  register_console_log_func(linker)?;
+  register_host_call_func(linker)?;
+  register_host_response_func(linker)?;
+  register_host_response_len_func(linker)?;
+  register_guest_response_func(linker)?;
+  register_guest_error_func(linker)?;
+  register_host_error_func(linker)?;
+  register_host_error_len_func(linker)?;
 
-    let invocation = host.get_guest_request();
-    let memory = get_caller_memory(&mut caller);
-    if let Some(inv) = invocation {
-      write_bytes_to_memory(caller.as_context(), memory, ptr.unwrap(), &inv.msg);
-      write_bytes_to_memory(caller.as_context(), memory, op_ptr.unwrap(), inv.operation.as_bytes());
-    }
-    Ok(())
-  })
+  Ok(())
 }
 
-pub(crate) fn console_log_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
-  let callback_type = FuncType::new(vec![ValType::I32, ValType::I32], vec![]);
-
-  Func::new(
-    store,
-    callback_type,
-    move |mut caller, params: &[Val], _results: &mut [Val]| {
-      let ptr = params[0].i32();
-      let len = params[1].i32();
-      let memory = get_caller_memory(&mut caller);
-      let vec = get_vec_from_memory(caller.as_context(), memory, ptr.unwrap(), len.unwrap());
-
-      let msg = std::str::from_utf8(&vec).unwrap();
-
-      host.do_console_log(msg);
-      Ok(())
-    },
-  )
+fn register_guest_request_func(linker: &mut Linker<WapcStore>) -> Result<()> {
+  linker
+    .func_wrap(
+      HOST_NAMESPACE,
+      wapc_functions::GUEST_REQUEST_FN,
+      |mut caller: Caller<'_, WapcStore>, op_ptr: i32, ptr: i32| {
+        let host = caller
+          .data()
+          .host
+          .as_ref()
+          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+        let invocation = host.get_guest_request();
+        let memory = get_caller_memory(&mut caller)?;
+        if let Some(inv) = invocation {
+          write_bytes_to_memory(caller.as_context(), memory, ptr, &inv.msg);
+          write_bytes_to_memory(caller.as_context(), memory, op_ptr, inv.operation.as_bytes());
+        };
+        Ok(())
+      },
+    )
+    .map_err(|e| Error::LinkerFuncDef {
+      func: format!("{}.{}", HOST_NAMESPACE, wapc_functions::GUEST_REQUEST_FN),
+      err: e.to_string(),
+    })?;
+  Ok(())
 }
 
-pub(crate) fn host_call_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
-  let callback_type = FuncType::new(
-    vec![
-      ValType::I32,
-      ValType::I32,
-      ValType::I32,
-      ValType::I32,
-      ValType::I32,
-      ValType::I32,
-      ValType::I32,
-      ValType::I32,
-    ],
-    vec![ValType::I32],
-  );
-  Func::new(
-    store,
-    callback_type,
-    move |mut caller, params: &[Val], results: &mut [Val]| {
-      /*let id = {
-          let mut state = state.borrow_mut();
-          state.host_response = None;
-          state.host_error = None;
-          state.id
-      }; */
-      let memory = get_caller_memory(&mut caller);
+fn register_console_log_func(linker: &mut Linker<WapcStore>) -> Result<()> {
+  linker
+    .func_wrap(
+      HOST_NAMESPACE,
+      wapc_functions::HOST_CONSOLE_LOG,
+      |mut caller: Caller<'_, WapcStore>, ptr: i32, len: i32| {
+        let memory = get_caller_memory(&mut caller)?;
+        let host = caller
+          .data()
+          .host
+          .as_ref()
+          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+        let vec = get_vec_from_memory(caller.as_context(), memory, ptr, len);
 
-      let bd_ptr = params[0].i32();
-      let bd_len = params[1].i32();
-      let ns_ptr = params[2].i32();
-      let ns_len = params[3].i32();
-      let op_ptr = params[4].i32();
-      let op_len = params[5].i32();
-      let ptr = params[6].i32();
-      let len = params[7].i32();
+        let msg = std::str::from_utf8(&vec)
+          .map_err(|e| Trap::new(format!("console_log: cannot convert message to UTF8: {:?}", e)))?;
 
-      let vec = get_vec_from_memory(caller.as_context(), memory, ptr.unwrap(), len.unwrap());
-      let bd_vec = get_vec_from_memory(caller.as_context(), memory, bd_ptr.unwrap(), bd_len.unwrap());
-      let bd = std::str::from_utf8(&bd_vec).unwrap();
-      let ns_vec = get_vec_from_memory(caller.as_context(), memory, ns_ptr.unwrap(), ns_len.unwrap());
-      let ns = std::str::from_utf8(&ns_vec).unwrap();
-      let op_vec = get_vec_from_memory(caller.as_context(), memory, op_ptr.unwrap(), op_len.unwrap());
-      let op = std::str::from_utf8(&op_vec).unwrap();
-      //trace!("Guest {} invoking host operation", id, op);
-      let result = host.do_host_call(bd, ns, op, &vec);
-      if let Ok(r) = result {
-        results[0] = Val::I32(r);
-      }
-      Ok(())
-    },
-  )
+        host.do_console_log(msg);
+        Ok(())
+      },
+    )
+    .map_err(|e| Error::LinkerFuncDef {
+      func: format!("{}.{}", HOST_NAMESPACE, wapc_functions::HOST_CONSOLE_LOG),
+      err: e.to_string(),
+    })?;
+  Ok(())
 }
 
-pub(crate) fn host_response_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
-  let callback_type = FuncType::new(vec![ValType::I32], vec![]);
-  Func::new(
-    store,
-    callback_type,
-    move |mut caller, params: &[Val], _results: &mut [Val]| {
-      if let Some(ref e) = host.get_host_response() {
-        let memory = get_caller_memory(&mut caller);
-        let ptr = params[0].i32();
-        write_bytes_to_memory(caller.as_context(), memory, ptr.unwrap(), e);
-      }
-      Ok(())
-    },
-  )
+fn register_host_call_func(linker: &mut Linker<WapcStore>) -> Result<()> {
+  linker
+    .func_wrap(
+      HOST_NAMESPACE,
+      wapc_functions::HOST_CALL,
+      |mut caller: Caller<'_, WapcStore>,
+       bd_ptr: i32,
+       bd_len: i32,
+       ns_ptr: i32,
+       ns_len: i32,
+       op_ptr: i32,
+       op_len: i32,
+       ptr: i32,
+       len: i32| {
+        let memory = get_caller_memory(&mut caller)?;
+
+        let host = caller
+          .data()
+          .host
+          .as_ref()
+          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+
+        let vec = get_vec_from_memory(caller.as_context(), memory, ptr, len);
+        let bd_vec = get_vec_from_memory(caller.as_context(), memory, bd_ptr, bd_len);
+        let bd = std::str::from_utf8(&bd_vec)
+          .map_err(|e| Trap::new(format!("host_call: cannot convert bd to UTF8: {:?}", e)))?;
+        let ns_vec = get_vec_from_memory(caller.as_context(), memory, ns_ptr, ns_len);
+        let ns = std::str::from_utf8(&ns_vec)
+          .map_err(|e| Trap::new(format!("host_call: cannot convert ns to UTF8: {:?}", e)))?;
+        let op_vec = get_vec_from_memory(caller.as_context(), memory, op_ptr, op_len);
+        let op = std::str::from_utf8(&op_vec)
+          .map_err(|e| Trap::new(format!("host_call: cannot convert op to UTF8: {:?}", e)))?;
+
+        let result = host.do_host_call(bd, ns, op, &vec);
+        Ok(result.unwrap_or(0))
+      },
+    )
+    .map_err(|e| Error::LinkerFuncDef {
+      func: format!("{}.{}", HOST_NAMESPACE, wapc_functions::HOST_CALL),
+      err: e.to_string(),
+    })?;
+  Ok(())
 }
 
-pub(crate) fn host_response_len_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
-  let callback_type = FuncType::new(vec![], vec![ValType::I32]);
+fn register_host_response_func(linker: &mut Linker<WapcStore>) -> Result<()> {
+  linker
+    .func_wrap(
+      HOST_NAMESPACE,
+      wapc_functions::HOST_RESPONSE_FN,
+      |mut caller: Caller<'_, WapcStore>, ptr: i32| {
+        let memory = get_caller_memory(&mut caller)?;
+        let host = caller
+          .data()
+          .host
+          .as_ref()
+          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
 
-  Func::new(
-    store,
-    callback_type,
-    move |_caller, _params: &[Val], results: &mut [Val]| {
-      results[0] = Val::I32(match host.get_host_response() {
-        Some(ref r) => r.len() as _,
-        None => 0,
-      });
-      Ok(())
-    },
-  )
+        if let Some(ref e) = host.get_host_response() {
+          write_bytes_to_memory(caller.as_context(), memory, ptr, e);
+        }
+        Ok(())
+      },
+    )
+    .map_err(|e| Error::LinkerFuncDef {
+      func: format!("{}.{}", HOST_NAMESPACE, wapc_functions::HOST_RESPONSE_FN),
+      err: e.to_string(),
+    })?;
+  Ok(())
 }
 
-pub(crate) fn guest_response_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
-  let callback_type = FuncType::new(vec![ValType::I32, ValType::I32], vec![]);
-  Func::new(
-    store,
-    callback_type,
-    move |mut caller, params: &[Val], _results: &mut [Val]| {
-      let ptr = params[0].i32();
-      let len = params[1].i32();
-      let memory = get_caller_memory(&mut caller);
-      let vec = get_vec_from_memory(caller.as_context(), memory, ptr.unwrap(), len.unwrap());
-      host.set_guest_response(vec);
-      Ok(())
-    },
-  )
+fn register_host_response_len_func(linker: &mut Linker<WapcStore>) -> Result<()> {
+  linker
+    .func_wrap(
+      HOST_NAMESPACE,
+      wapc_functions::HOST_RESPONSE_LEN_FN,
+      |caller: Caller<'_, WapcStore>| {
+        let host = caller
+          .data()
+          .host
+          .as_ref()
+          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+
+        let len = host.get_host_response().map_or_else(|| 0, |r| r.len()) as i32;
+        Ok(len)
+      },
+    )
+    .map_err(|e| Error::LinkerFuncDef {
+      func: format!("{}.{}", HOST_NAMESPACE, wapc_functions::HOST_RESPONSE_LEN_FN),
+      err: e.to_string(),
+    })?;
+  Ok(())
 }
 
-pub(crate) fn guest_error_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
-  let callback_type = FuncType::new(vec![ValType::I32, ValType::I32], vec![]);
-  Func::new(
-    store,
-    callback_type,
-    move |mut caller, params: &[Val], _results: &mut [Val]| {
-      let memory = get_caller_memory(&mut caller);
-      let ptr = params[0].i32();
-      let len = params[1].i32();
+fn register_guest_response_func(linker: &mut Linker<WapcStore>) -> Result<()> {
+  linker
+    .func_wrap(
+      HOST_NAMESPACE,
+      wapc_functions::GUEST_RESPONSE_FN,
+      |mut caller: Caller<'_, WapcStore>, ptr: i32, len: i32| {
+        let memory = get_caller_memory(&mut caller)?;
 
-      let vec = get_vec_from_memory(caller.as_context(), memory, ptr.unwrap(), len.unwrap());
-      host.set_guest_error(String::from_utf8(vec).unwrap());
-      Ok(())
-    },
-  )
+        let host = caller
+          .data()
+          .host
+          .as_ref()
+          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+
+        let vec = get_vec_from_memory(caller.as_context(), memory, ptr, len);
+        host.set_guest_response(vec);
+        Ok(())
+      },
+    )
+    .map_err(|e| Error::LinkerFuncDef {
+      func: format!("{}.{}", HOST_NAMESPACE, wapc_functions::GUEST_RESPONSE_FN),
+      err: e.to_string(),
+    })?;
+  Ok(())
 }
 
-pub(crate) fn host_error_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
-  let callback_type = FuncType::new(vec![ValType::I32], vec![]);
-  Func::new(
-    store,
-    callback_type,
-    move |mut caller, params: &[Val], _results: &mut [Val]| {
-      if let Some(ref e) = host.get_host_error() {
-        let ptr = params[0].i32();
-        let memory = get_caller_memory(&mut caller);
-        write_bytes_to_memory(caller.as_context(), memory, ptr.unwrap(), e.as_bytes());
-      }
-      Ok(())
-    },
-  )
+fn register_guest_error_func(linker: &mut Linker<WapcStore>) -> Result<()> {
+  linker
+    .func_wrap(
+      HOST_NAMESPACE,
+      wapc_functions::GUEST_ERROR_FN,
+      |mut caller: Caller<'_, WapcStore>, ptr: i32, len: i32| {
+        let memory = get_caller_memory(&mut caller)?;
+        let host = caller
+          .data()
+          .host
+          .as_ref()
+          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+
+        let vec = get_vec_from_memory(caller.as_context(), memory, ptr, len);
+        let guest_err_msg = String::from_utf8(vec)
+          .map_err(|e| Trap::new(format!("guest_error_func: cannot convert message to UTF8: {:?}", e)))?;
+        host.set_guest_error(guest_err_msg);
+        Ok(())
+      },
+    )
+    .map_err(|e| Error::LinkerFuncDef {
+      func: format!("{}.{}", HOST_NAMESPACE, wapc_functions::GUEST_ERROR_FN),
+      err: e.to_string(),
+    })?;
+  Ok(())
 }
 
-pub(crate) fn host_error_len_func(store: impl AsContextMut, host: Arc<ModuleState>) -> Func {
-  let callback_type = FuncType::new(vec![], vec![ValType::I32]);
-  Func::new(
-    store,
-    callback_type,
-    move |_caller, _params: &[Val], results: &mut [Val]| {
-      results[0] = Val::I32(match host.get_host_error() {
-        Some(ref e) => e.len() as _,
-        None => 0,
-      });
-      Ok(())
-    },
-  )
+fn register_host_error_func(linker: &mut Linker<WapcStore>) -> Result<()> {
+  linker
+    .func_wrap(
+      HOST_NAMESPACE,
+      wapc_functions::HOST_ERROR_FN,
+      |mut caller: Caller<'_, WapcStore>, ptr: i32| {
+        let memory = get_caller_memory(&mut caller)?;
+        let host = caller
+          .data()
+          .host
+          .as_ref()
+          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+
+        if let Some(ref e) = host.get_host_error() {
+          write_bytes_to_memory(caller.as_context(), memory, ptr, e.as_bytes());
+        }
+        Ok(())
+      },
+    )
+    .map_err(|e| Error::LinkerFuncDef {
+      func: format!("{}.{}", HOST_NAMESPACE, wapc_functions::HOST_ERROR_FN),
+      err: e.to_string(),
+    })?;
+  Ok(())
 }
 
-fn get_caller_memory<T>(caller: &mut Caller<T>) -> Memory {
-  let memory = caller.get_export("memory").map(|e| e.into_memory().unwrap());
-  memory.unwrap()
+fn register_host_error_len_func(linker: &mut Linker<WapcStore>) -> Result<()> {
+  linker
+    .func_wrap(
+      HOST_NAMESPACE,
+      wapc_functions::HOST_ERROR_LEN_FN,
+      |caller: Caller<'_, WapcStore>| {
+        let host = caller
+          .data()
+          .host
+          .as_ref()
+          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+
+        let len = host.get_host_error().map_or_else(|| 0, |r| r.len()) as i32;
+        Ok(len)
+      },
+    )
+    .map_err(|e| Error::LinkerFuncDef {
+      func: format!("{}.{}", HOST_NAMESPACE, wapc_functions::HOST_ERROR_LEN_FN),
+      err: e.to_string(),
+    })?;
+  Ok(())
+}
+
+fn get_caller_memory<T>(caller: &mut Caller<T>) -> std::result::Result<Memory, Trap> {
+  let memory_export = caller
+    .get_export("memory")
+    .ok_or_else(|| Trap::new("Cannot find 'mem' export"))?;
+  memory_export
+    .into_memory()
+    .ok_or_else(|| Trap::new("'mem' export cannot be converted into a Memory instance"))
 }
 
 fn get_vec_from_memory<'a, T: 'a>(store: impl Into<StoreContext<'a, T>>, mem: Memory, ptr: i32, len: i32) -> Vec<u8> {

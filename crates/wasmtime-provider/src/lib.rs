@@ -89,11 +89,11 @@ use errors::{Error, Result};
 mod builder;
 pub use builder::WasmtimeEngineProviderBuilder;
 use parking_lot::RwLock;
-use wapc::{wapc_functions, ModuleState, WasiParams, WebAssemblyEngineProvider, HOST_NAMESPACE};
+use wapc::{wapc_functions, ModuleState, WasiParams, WebAssemblyEngineProvider};
 // export wasmtime and wasmtime_wasi, so that consumers of this crate can use
 // the very same version
 pub use wasmtime;
-use wasmtime::{AsContextMut, Engine, Extern, ExternType, Instance, Linker, Module, Store, TypedFunc};
+use wasmtime::{AsContextMut, Engine, Instance, InstancePre, Linker, Module, Store, TypedFunc};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "wasi")] {
@@ -101,10 +101,6 @@ cfg_if::cfg_if! {
         use wasmtime_wasi::WasiCtx;
     }
 }
-
-// namespace needed for some language support
-const WASI_UNSTABLE_NAMESPACE: &str = "wasi_unstable";
-const WASI_SNAPSHOT_PREVIEW1_NAMESPACE: &str = "wasi_snapshot_preview1";
 
 use std::sync::Arc;
 
@@ -120,6 +116,45 @@ struct EngineInner {
 struct WapcStore {
   #[cfg(feature = "wasi")]
   wasi_ctx: WasiCtx,
+  host: Option<Arc<ModuleState>>,
+}
+
+impl WapcStore {
+  fn new(wasi_params: &WasiParams, host: Option<Arc<ModuleState>>) -> Result<WapcStore> {
+    cfg_if::cfg_if! {
+      if #[cfg(feature = "wasi")] {
+
+        let preopened_dirs = wasi::compute_preopen_dirs(
+            &wasi_params.preopened_dirs,
+            &wasi_params.map_dirs
+        ).map_err(|e|
+            errors::Error::WasiInitCtxError(format!("Cannot compute preopened dirs: {:?}", e)))?;
+        let wasi_ctx = wasi::init_ctx(
+            &preopened_dirs,
+            &wasi_params.argv,
+            &wasi_params.env_vars,
+        ).map_err(|e| errors::Error::WasiInitCtxError(e.to_string()))?;
+
+        Ok(WapcStore{
+            wasi_ctx,
+            host,
+        })
+      } else {
+        if wasi.is_some() {
+            // this check is required because otherwise the `wasi` parameter
+            // would not be used when the feature `wasi` is not enabled.
+            // That would cause a compilation error because we do not allow unused
+            // code.
+            Err(errors::Error::WasiDisabled);
+        } else {
+          Ok(WapcStore{
+              wasi_ctx,
+              host,
+          })
+        }
+      }
+    }
+  }
 }
 
 /// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
@@ -138,41 +173,106 @@ struct EpochDeadlines {
   wapc_func: u64,
 }
 
+/// A pre initialized WasmtimeEngineProvider
+///
+/// Can be used to quickly create a new instance of WasmtimeEngineProvider
+#[allow(missing_debug_implementations)]
+#[derive(Clone)]
+pub(crate) struct WasmtimeEngineProviderPre {
+  module: Module,
+  wasi_params: WasiParams,
+  engine: Engine,
+  linker: Linker<WapcStore>,
+  instance_pre: InstancePre<WapcStore>,
+  epoch_deadlines: Option<EpochDeadlines>,
+}
+
+impl WasmtimeEngineProviderPre {
+  fn new(engine: Engine, module: Module, wasi: Option<WasiParams>) -> Result<Self> {
+    let mut linker: Linker<WapcStore> = Linker::new(&engine);
+
+    let wasi_params = wasi.unwrap_or_default();
+
+    cfg_if::cfg_if! {
+      if #[cfg(feature = "wasi")] {
+        wasmtime_wasi::add_to_linker(&mut linker, |s| &mut s.wasi_ctx).unwrap();
+      }
+    };
+
+    // register all the waPC host functions
+    callbacks::add_to_linker(&mut linker)?;
+
+    // it's fine to set the `host` to None now, because the waPC host functions
+    // are not executed yet
+    let wapc_store = WapcStore::new(&wasi_params, None)?;
+    let mut store = Store::new(&engine, wapc_store);
+
+    let instance_pre = linker.instantiate_pre(&mut store, &module)?;
+
+    Ok(Self {
+      module,
+      wasi_params,
+      engine,
+      linker,
+      instance_pre,
+      epoch_deadlines: None,
+    })
+  }
+
+  /// Create an instance of [`WasmtimeEngineProvider`] ready to be consumed
+  ///
+  /// Note: from micro-benchmarking, this method is 10 microseconds faster than
+  /// `WasmtimeEngineProvider::clone`. This isn't a significant gain to justify
+  /// the exposure of this method to all the consumers of `wasmtime_provider`.
+  pub(crate) fn rehydrate(&self) -> Result<WasmtimeEngineProvider> {
+    let engine = self.engine.clone();
+
+    let wapc_store = WapcStore::new(&self.wasi_params, None)?;
+    let store = Store::new(&engine, wapc_store);
+
+    Ok(WasmtimeEngineProvider {
+      module: self.module.clone(),
+      inner: None,
+      engine,
+      epoch_deadlines: self.epoch_deadlines,
+      linker: self.linker.clone(),
+      instance_pre: self.instance_pre.clone(),
+      store,
+      wasi_params: self.wasi_params.clone(),
+    })
+  }
+}
+
 /// A waPC engine provider that encapsulates the Wasmtime WebAssembly runtime
 #[allow(missing_debug_implementations)]
 pub struct WasmtimeEngineProvider {
   module: Module,
-  #[cfg(feature = "wasi")]
   wasi_params: WasiParams,
   inner: Option<EngineInner>,
-  store: Store<WapcStore>,
   engine: Engine,
   linker: Linker<WapcStore>,
+  store: Store<WapcStore>,
+  instance_pre: InstancePre<WapcStore>,
   epoch_deadlines: Option<EpochDeadlines>,
 }
 
 impl Clone for WasmtimeEngineProvider {
   fn clone(&self) -> Self {
     let engine = self.engine.clone();
-    cfg_if::cfg_if! {
-      if #[cfg(feature = "wasi")] {
-        let wasi_ctx = init_wasi(&self.wasi_params).unwrap();
-        let store = Store::new(&engine, WapcStore { wasi_ctx });
-      } else {
-        let store = Store::new(&engine, WapcStore {});
-      }
-    };
+
+    let wapc_store = WapcStore::new(&self.wasi_params, None).unwrap();
+    let store = Store::new(&engine, wapc_store);
 
     match &self.inner {
       Some(state) => {
         let mut new = Self {
           module: self.module.clone(),
           inner: None,
-          store,
           engine,
           epoch_deadlines: self.epoch_deadlines,
           linker: self.linker.clone(),
-          #[cfg(feature = "wasi")]
+          instance_pre: self.instance_pre.clone(),
+          store,
           wasi_params: self.wasi_params.clone(),
         };
         new.init(state.host.clone()).unwrap();
@@ -181,11 +281,11 @@ impl Clone for WasmtimeEngineProvider {
       None => Self {
         module: self.module.clone(),
         inner: None,
-        store,
         engine,
         epoch_deadlines: self.epoch_deadlines,
         linker: self.linker.clone(),
-        #[cfg(feature = "wasi")]
+        instance_pre: self.instance_pre.clone(),
+        store,
         wasi_params: self.wasi_params.clone(),
       },
     }
@@ -234,43 +334,8 @@ impl WasmtimeEngineProvider {
   )]
   pub fn new_with_engine(buf: &[u8], engine: Engine, wasi: Option<WasiParams>) -> Result<Self> {
     let module = Module::new(&engine, buf)?;
-
-    cfg_if::cfg_if! {
-      if #[cfg(feature = "wasi")] {
-        let mut linker: Linker<WapcStore> = Linker::new(&engine);
-        wasmtime_wasi::add_to_linker(&mut linker, |s| &mut s.wasi_ctx).unwrap();
-        let wasi_params = wasi.unwrap_or_default();
-        let wasi_ctx = wasi::init_ctx(
-            &wasi::compute_preopen_dirs(&wasi_params.preopened_dirs, &wasi_params.map_dirs)
-                .unwrap(),
-            &wasi_params.argv,
-            &wasi_params.env_vars,
-        )
-        .unwrap();
-        let store = Store::new(&engine, WapcStore { wasi_ctx });
-      } else {
-        if wasi.is_some() {
-            // this check is required because otherwise the `wasi` parameter
-            // would not be used when the feature `wasi` is not enabled.
-            // That would cause a compilation error because we do not allow unused
-            // code.
-            return Err(errors::Error::WasiDisabled);
-        }
-        let linker: Linker<WapcStore> = Linker::new(&engine);
-        let store = Store::new(&engine, WapcStore {});
-      }
-    };
-
-    Ok(WasmtimeEngineProvider {
-      module,
-      #[cfg(feature = "wasi")]
-      wasi_params,
-      inner: None,
-      store,
-      engine,
-      linker,
-      epoch_deadlines: None,
-    })
+    let pre = WasmtimeEngineProviderPre::new(engine, module, wasi)?;
+    pre.rehydrate()
   }
 }
 
@@ -279,9 +344,14 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
     &mut self,
     host: Arc<ModuleState>,
   ) -> std::result::Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-    let instance = instance_from_module(&mut self.store, &self.module, &host, &self.linker)?;
+    // create the proper store, now we have a value for `host`
+    let wapc_store = WapcStore::new(&self.wasi_params, Some(host.clone()))?;
+    self.store = Store::new(&self.engine, wapc_store);
+
+    let instance = self.instance_pre.instantiate(&mut self.store)?;
+
     let instance_ref = Arc::new(RwLock::new(instance));
-    let gc = guest_call_fn(self.store.as_context_mut(), &instance_ref)?;
+    let gc = guest_call_fn(&mut self.store, &instance_ref)?;
     self.inner = Some(EngineInner {
       instance: instance_ref,
       guest_call_fn: gc,
@@ -331,13 +401,9 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
       module.len()
     );
 
-    let new_instance = instance_from_buffer(
-      &mut self.store,
-      &self.engine,
-      module,
-      &self.inner.as_ref().unwrap().host,
-      &self.linker,
-    )?;
+    let module = Module::new(&self.engine, module)?;
+    self.instance_pre = self.linker.instantiate_pre(&mut self.store, &module)?;
+    let new_instance = self.instance_pre.instantiate(&mut self.store)?;
     *self.inner.as_ref().unwrap().instance.write() = new_instance;
 
     Ok(self.initialize()?)
@@ -378,85 +444,6 @@ impl WasmtimeEngineProvider {
       }
     }
     Ok(())
-  }
-}
-
-fn instance_from_buffer(
-  store: &mut Store<WapcStore>,
-  engine: &Engine,
-  buf: &[u8],
-  state: &Arc<ModuleState>,
-  linker: &Linker<WapcStore>,
-) -> Result<Instance> {
-  let module = Module::new(engine, buf).unwrap();
-  let imports = arrange_imports(&module, state, store, linker);
-  Ok(wasmtime::Instance::new(store.as_context_mut(), &module, imports?.as_slice()).unwrap())
-}
-
-fn instance_from_module(
-  store: &mut Store<WapcStore>,
-  module: &Module,
-  state: &Arc<ModuleState>,
-  linker: &Linker<WapcStore>,
-) -> Result<Instance> {
-  let imports = arrange_imports(module, state, store, linker);
-  Ok(wasmtime::Instance::new(store.as_context_mut(), module, imports?.as_slice()).unwrap())
-}
-
-#[cfg(feature = "wasi")]
-fn init_wasi(params: &WasiParams) -> Result<WasiCtx> {
-  wasi::init_ctx(
-    &wasi::compute_preopen_dirs(&params.preopened_dirs, &params.map_dirs).unwrap(),
-    &params.argv,
-    &params.env_vars,
-  )
-  .map_err(|e| errors::Error::InitializationFailed(e))
-}
-
-/// wasmtime requires that the list of callbacks be "zippable" with the list
-/// of module imports. In order to ensure that both lists are in the same
-/// order, we have to loop through the module imports and instantiate the
-/// corresponding callback. We **cannot** rely on a predictable import order
-/// in the wasm module
-#[allow(clippy::unnecessary_wraps)]
-fn arrange_imports(
-  module: &Module,
-  host: &Arc<ModuleState>,
-  store: &mut impl AsContextMut<Data = WapcStore>,
-  linker: &Linker<WapcStore>,
-) -> Result<Vec<Extern>> {
-  Ok(
-    module
-      .imports()
-      .filter_map(|imp| {
-        if let ExternType::Func(_) = imp.ty() {
-          match imp.module() {
-            HOST_NAMESPACE => Some(callback_for_import(store.as_context_mut(), imp.name(), host.clone())),
-            WASI_SNAPSHOT_PREVIEW1_NAMESPACE | WASI_UNSTABLE_NAMESPACE => {
-              linker.get_by_import(store.as_context_mut(), &imp)
-            }
-            other => panic!("import module `{}` was not found", other), //TODO: get rid of panic
-          }
-        } else {
-          None
-        }
-      })
-      .collect(),
-  )
-}
-
-fn callback_for_import(store: impl AsContextMut, import: &str, host: Arc<ModuleState>) -> Extern {
-  match import {
-    wapc_functions::HOST_CONSOLE_LOG => callbacks::console_log_func(store, host).into(),
-    wapc_functions::HOST_CALL => callbacks::host_call_func(store, host).into(),
-    wapc_functions::GUEST_REQUEST_FN => callbacks::guest_request_func(store, host).into(),
-    wapc_functions::HOST_RESPONSE_FN => callbacks::host_response_func(store, host).into(),
-    wapc_functions::HOST_RESPONSE_LEN_FN => callbacks::host_response_len_func(store, host).into(),
-    wapc_functions::GUEST_RESPONSE_FN => callbacks::guest_response_func(store, host).into(),
-    wapc_functions::GUEST_ERROR_FN => callbacks::guest_error_func(store, host).into(),
-    wapc_functions::HOST_ERROR_FN => callbacks::host_error_func(store, host).into(),
-    wapc_functions::HOST_ERROR_LEN_FN => callbacks::host_error_len_func(store, host).into(),
-    _ => unreachable!(),
   }
 }
 
