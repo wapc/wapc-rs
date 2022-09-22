@@ -1,5 +1,5 @@
-use crate::errors::Result;
-use crate::WasmtimeEngineProvider;
+use crate::errors::{Error, Result};
+use crate::{WasmtimeEngineProvider, WasmtimeEngineProviderPre};
 
 /// Used to build [`WasmtimeEngineProvider`](crate::WasmtimeEngineProvider) instances.
 #[allow(missing_debug_implementations)]
@@ -103,17 +103,35 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
     self
   }
 
-  /// Create a `WasmtimeEngineProvider` instance
-  pub fn build(&self) -> Result<WasmtimeEngineProvider> {
-    let mut provider = match &self.engine {
+  /// Create a [`WasmtimeEngineProviderPre`] instance. This instance can then
+  /// be reused as many time as wanted to quickly instantiate a [`WasmtimeEngineProvider`]
+  /// by using the [`WasmtimeEngineProviderPre::rehydrate`] method.
+  pub(crate) fn build_pre(&self) -> Result<WasmtimeEngineProviderPre> {
+    if self.module_bytes.is_some() && self.module.is_some() {
+      return Err(Error::BuilderInvalidConfig(
+        "`module_bytes` and `module` cannot be provided at the same time".to_owned(),
+      ));
+    }
+    if self.module_bytes.is_none() && self.module.is_none() {
+      return Err(Error::BuilderInvalidConfig(
+        "Neither `module_bytes` nor `module` have been provided".to_owned(),
+      ));
+    }
+
+    let mut pre = match &self.engine {
       Some(e) => {
+        let module = match &self.module_bytes {
+          Some(module_bytes) => wasmtime::Module::new(e, module_bytes),
+          None => Ok(self.module.as_ref().unwrap().clone()),
+        }?;
+
         // note: we have to call `.clone()` because `e` is behind
         // a shared reference and `Engine` does not implement `Copy`.
         // However, cloning an `Engine` is a cheap operation because
         // under the hood wasmtime does not create a new `Engine`, but
         // rather creates a new reference to it.
         // See https://docs.rs/wasmtime/latest/wasmtime/struct.Engine.html#engines-and-clone
-        WasmtimeEngineProvider::new_with_engine(self.module_bytes, e.clone(), self.wasi_params.clone())
+        WasmtimeEngineProviderPre::new(e.clone(), module, self.wasi_params.clone())
       }
       None => {
         let mut config = wasmtime::Config::default();
@@ -135,11 +153,23 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
         }
 
         let engine = wasmtime::Engine::new(&config)?;
-        WasmtimeEngineProvider::new_with_engine(self.module_bytes, engine, self.wasi_params.clone())
+
+        let module = match &self.module_bytes {
+          Some(module_bytes) => wasmtime::Module::new(&engine, module_bytes),
+          None => Ok(self.module.as_ref().unwrap().clone()),
+        }?;
+
+        WasmtimeEngineProviderPre::new(engine, module, self.wasi_params.clone())
       }
     }?;
-    provider.epoch_deadlines = self.epoch_deadlines;
+    pre.epoch_deadlines = self.epoch_deadlines;
 
-    Ok(provider)
+    Ok(pre)
+  }
+
+  /// Create a `WasmtimeEngineProvider` instance
+  pub fn build(&self) -> Result<WasmtimeEngineProvider> {
+    let pre = self.build_pre()?;
+    pre.rehydrate()
   }
 }

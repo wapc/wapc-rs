@@ -22,6 +22,23 @@ pub enum Error {
   #[error("WASI related parameter provided, but wasi feature is disabled")]
   WasiDisabled,
 
+  /// Error originating when wasi context initialization fails
+  #[error("WASI context initialization failed: {0}")]
+  WasiInitCtxError(String),
+
+  /// Error caused when a host function cannot be registered into a wasmtime::Linker
+  #[error("Linker cannot register function '{func}': {err}")]
+  LinkerFuncDef {
+    /// wasm function that was being defined
+    func: String,
+    /// error reported
+    err: String,
+  },
+
+  /// Error caused by an invalid configuration of the [`WasmtimeEngineProviderBuilder`]
+  #[error("Invalid WasmtimeEngineProviderBuilder configuration: {0}")]
+  BuilderInvalidConfig(String),
+
   /// Generic error
   // wasmtime uses `anyhow::Error` inside of its public API
   #[error(transparent)]
