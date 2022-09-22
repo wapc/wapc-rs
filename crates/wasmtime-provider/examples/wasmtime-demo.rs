@@ -17,7 +17,9 @@ pub fn main() -> Result<(), wapc::errors::Error> {
     .expect("The string payload to send should be passed as the third CLI parameter");
 
   let module_bytes = std::fs::read(file).expect("WASM could not be read");
-  let engine = WasmtimeEngineProviderBuilder::new(&module_bytes).build()?;
+  let engine = WasmtimeEngineProviderBuilder::new()
+    .module_bytes(&module_bytes)
+    .build()?;
 
   let host = WapcHost::new(Box::new(engine), Some(Box::new(host_callback)))?;
 

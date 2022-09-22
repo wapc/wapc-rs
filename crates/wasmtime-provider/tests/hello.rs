@@ -7,9 +7,12 @@ fn create_guest(path: &str) -> Result<WapcHost, Error> {
   let buf = read(path)?;
   cfg_if::cfg_if! {
     if #[cfg(feature = "cache")] {
-        let builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new(&buf).enable_cache(None);
+        let builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
+            .module_bytes(&buf).
+            enable_cache(None);
     } else {
-        let builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new(&buf);
+        let builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
+            .module_bytes(&buf);
     }
   }
   let engine = builder.build().expect("Cannot create WebAssemblyEngineProvider");
@@ -75,7 +78,8 @@ fn runs_wapc_timeout() -> Result<(), Error> {
   engine_conf.epoch_interruption(true);
   let engine = wasmtime::Engine::new(&engine_conf).expect("cannot create wasmtime engine");
 
-  let wapc_engine_builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new(&module_bytes)
+  let wapc_engine_builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
+    .module_bytes(&module_bytes)
     .engine(engine.clone())
     .enable_epoch_interruptions(wapc_init_deadline, wapc_func_deadline);
   let guest = create_guest_from_builder(&wapc_engine_builder)?;
