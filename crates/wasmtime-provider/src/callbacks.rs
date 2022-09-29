@@ -1,5 +1,5 @@
 use wapc::{wapc_functions, HOST_NAMESPACE};
-use wasmtime::{AsContext, Caller, Linker, Memory, StoreContext, Trap};
+use wasmtime::{AsContext, AsContextMut, Caller, Linker, Memory, StoreContext, Trap};
 
 use crate::errors::{Error, Result};
 use crate::WapcStore;
@@ -32,8 +32,8 @@ fn register_guest_request_func(linker: &mut Linker<WapcStore>) -> Result<()> {
         let invocation = host.get_guest_request();
         let memory = get_caller_memory(&mut caller)?;
         if let Some(inv) = invocation {
-          write_bytes_to_memory(caller.as_context(), memory, ptr, &inv.msg);
-          write_bytes_to_memory(caller.as_context(), memory, op_ptr, inv.operation.as_bytes());
+          write_bytes_to_memory(caller.as_context_mut(), memory, ptr, &inv.msg)?;
+          write_bytes_to_memory(caller.as_context_mut(), memory, op_ptr, inv.operation.as_bytes())?;
         };
         Ok(())
       },
@@ -131,7 +131,7 @@ fn register_host_response_func(linker: &mut Linker<WapcStore>) -> Result<()> {
           .ok_or_else(|| Trap::new("host should have been set during the init"))?;
 
         if let Some(ref e) = host.get_host_response() {
-          write_bytes_to_memory(caller.as_context(), memory, ptr, e);
+          write_bytes_to_memory(caller.as_context_mut(), memory, ptr, e)?;
         }
         Ok(())
       },
@@ -233,7 +233,7 @@ fn register_host_error_func(linker: &mut Linker<WapcStore>) -> Result<()> {
           .ok_or_else(|| Trap::new("host should have been set during the init"))?;
 
         if let Some(ref e) = host.get_host_error() {
-          write_bytes_to_memory(caller.as_context(), memory, ptr, e.as_bytes());
+          write_bytes_to_memory(caller.as_context_mut(), memory, ptr, e.as_bytes())?;
         }
         Ok(())
       },
@@ -282,10 +282,13 @@ fn get_vec_from_memory<'a, T: 'a>(store: impl Into<StoreContext<'a, T>>, mem: Me
   data[ptr as usize..(ptr + len) as usize].to_vec()
 }
 
-fn write_bytes_to_memory(store: impl AsContext, memory: Memory, ptr: i32, slice: &[u8]) {
-  #[allow(unsafe_code)]
-  unsafe {
-    let raw = memory.data_ptr(store).offset(ptr as isize);
-    raw.copy_from(slice.as_ptr(), slice.len());
-  }
+fn write_bytes_to_memory(
+  store: impl AsContextMut,
+  memory: Memory,
+  ptr: i32,
+  slice: &[u8],
+) -> std::result::Result<(), Trap> {
+  memory
+    .write(store, ptr as usize, slice)
+    .map_err(|e| Trap::new(e.to_string()))
 }
