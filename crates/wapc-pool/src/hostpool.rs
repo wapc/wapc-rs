@@ -87,15 +87,13 @@ impl HostPool {
   /// Get the current number of active workers.
   #[must_use]
   pub fn num_active_workers(&self) -> usize {
-    match &self.pool {
-      Some(pool) => pool.get_current_worker_count(),
-      None => 0,
-    }
+    self.pool.as_ref().map_or(0, |pool| pool.get_current_worker_count())
   }
 
   fn spawn(&self, max_idle: Option<Duration>) -> Result<()> {
-    match &self.pool {
-      Some(pool) => {
+    self.pool.as_ref().map_or_else(
+      || Err(Error::NoPool.into()),
+      |pool| {
         let name = self.name.clone();
         let i = pool.get_current_worker_count();
         let factory = self.factory.clone();
@@ -104,10 +102,10 @@ impl HostPool {
           trace!("Host thread {}.{} started...", name, i);
           let host = factory();
           loop {
-            let message = match max_idle {
-              None => rx.recv().map_err(|e| e.to_string()),
-              Some(duration) => rx.recv_timeout(duration).map_err(|e| e.to_string()),
-            };
+            let message = max_idle.map_or_else(
+              || rx.recv().map_err(|e| e.to_string()),
+              |duration| rx.recv_timeout(duration).map_err(|e| e.to_string()),
+            );
             if let Err(e) = message {
               debug!("Host thread {}.{} closing: {}", name, i, e);
               break;
@@ -129,9 +127,8 @@ impl HostPool {
           trace!("Host thread {}.{} stopped.", name, i);
         });
         Ok(())
-      }
-      None => Err(Error::NoPool.into()),
-    }
+      },
+    )
   }
 
   /// Call an operation on one of the workers.

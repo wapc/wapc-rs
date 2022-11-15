@@ -25,8 +25,16 @@ pub extern "C" fn __guest_call(op_len: i32, req_len: i32) -> i32 {
     opbuf.set_len(op_len as usize);
   };
 
-  match REGISTRY.lock().unwrap().get(&opbuf) {
-    Some(handler) => match handler(&buf) {
+  REGISTRY.lock().unwrap().get(&opbuf).map_or_else(
+    || {
+      let mut errmsg = b"No handler registered for function ".to_vec();
+      errmsg.append(&mut opbuf);
+      unsafe {
+        __guest_error(errmsg.as_ptr(), errmsg.len());
+      }
+      0
+    },
+    |handler| match handler(&buf) {
       Ok(result) => {
         unsafe {
           __guest_response(result.as_ptr(), result.len());
@@ -41,15 +49,7 @@ pub extern "C" fn __guest_call(op_len: i32, req_len: i32) -> i32 {
         0
       }
     },
-    None => {
-      let mut errmsg = b"No handler registered for function ".to_vec();
-      errmsg.append(&mut opbuf);
-      unsafe {
-        __guest_error(errmsg.as_ptr(), errmsg.len());
-      }
-      0
-    }
-  }
+  )
 }
 
 #[link(wasm_import_module = "wapc")]

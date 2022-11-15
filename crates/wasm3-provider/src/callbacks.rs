@@ -25,11 +25,7 @@ pub(crate) fn host_call(
   let op = ::std::str::from_utf8(&op_vec).unwrap();
 
   let result = host.do_host_call(bd, ns, op, &vec);
-  if let Ok(r) = result {
-    r
-  } else {
-    0
-  }
+  result.map_or(0, |r| r)
 }
 
 pub(crate) fn guest_request(ctx: &CallContext, op_ptr: i32, ptr: i32, host: &Arc<ModuleState>) {
