@@ -5,6 +5,7 @@ authors = [
   "Kevin Hoffman <alothien@gmail.com>",
   "Jarrod Overson <jsoverson@gmail.com>",
   "Phil Kedy <phil.kedy@gmail.com>",
+  "Flavio Castelli <flavio@castelli.me>",
 ]
 edition = "2021"
 description = "A wasmtime engine provider for the waPC host"
