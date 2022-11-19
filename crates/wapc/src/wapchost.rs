@@ -93,26 +93,30 @@ impl WapcHost {
     if callresult == 0 {
       // invocation failed
       let lock = self.state.guest_error.read();
-      match *lock {
-        Some(ref s) => Err(errors::Error::GuestCallFailure(s.clone())),
-        None => Err(errors::Error::GuestCallFailure(
-          "No error message set for call failure".to_owned(),
-        )),
-      }
+      lock.as_ref().map_or_else(
+        || {
+          Err(errors::Error::GuestCallFailure(
+            "No error message set for call failure".to_owned(),
+          ))
+        },
+        |s| Err(errors::Error::GuestCallFailure(s.clone())),
+      )
     } else {
       // invocation succeeded
-      match *self.state.guest_response.read() {
-        Some(ref e) => Ok(e.clone()),
-        None => {
+      self.state.guest_response.read().as_ref().map_or_else(
+        || {
           let lock = self.state.guest_error.read();
-          match *lock {
-            Some(ref s) => Err(errors::Error::GuestCallFailure(s.clone())),
-            None => Err(errors::Error::GuestCallFailure(
-              "No error message OR response set for call success".to_owned(),
-            )),
-          }
-        }
-      }
+          lock.as_ref().map_or_else(
+            || {
+              Err(errors::Error::GuestCallFailure(
+                "No error message OR response set for call success".to_owned(),
+              ))
+            },
+            |s| Err(errors::Error::GuestCallFailure(s.clone())),
+          )
+        },
+        |e| Ok(e.clone()),
+      )
     }
   }
 

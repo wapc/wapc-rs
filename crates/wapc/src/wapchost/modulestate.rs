@@ -74,12 +74,10 @@ impl ModuleState {
       *self.host_error.write() = None;
       self.id
     };
-    let result = {
-      match self.host_callback {
-        Some(ref f) => f(id, binding, namespace, operation, payload),
-        None => Err("Missing host callback function!".into()),
-      }
-    };
+    let result = self.host_callback.as_ref().map_or_else(
+      || Err("Missing host callback function!".into()),
+      |f| f(id, binding, namespace, operation, payload),
+    );
     Ok(match result {
       Ok(v) => {
         *self.host_response.write() = Some(v);

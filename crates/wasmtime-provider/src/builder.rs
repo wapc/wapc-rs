@@ -120,10 +120,10 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
 
     let mut pre = match &self.engine {
       Some(e) => {
-        let module = match &self.module_bytes {
-          Some(module_bytes) => wasmtime::Module::new(e, module_bytes),
-          None => Ok(self.module.as_ref().unwrap().clone()),
-        }?;
+        let module = self.module_bytes.as_ref().map_or_else(
+          || Ok(self.module.as_ref().unwrap().clone()),
+          |module_bytes| wasmtime::Module::new(e, module_bytes),
+        )?;
 
         // note: we have to call `.clone()` because `e` is behind
         // a shared reference and `Engine` does not implement `Copy`.
@@ -154,10 +154,10 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
 
         let engine = wasmtime::Engine::new(&config)?;
 
-        let module = match &self.module_bytes {
-          Some(module_bytes) => wasmtime::Module::new(&engine, module_bytes),
-          None => Ok(self.module.as_ref().unwrap().clone()),
-        }?;
+        let module = self.module_bytes.as_ref().map_or_else(
+          || Ok(self.module.as_ref().unwrap().clone()),
+          |module_bytes| wasmtime::Module::new(&engine, module_bytes),
+        )?;
 
         WasmtimeEngineProviderPre::new(engine, module, self.wasi_params.clone())
       }

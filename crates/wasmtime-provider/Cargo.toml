@@ -1,10 +1,11 @@
 [package]
 name = "wasmtime-provider"
-version = "1.3.0"
+version = "1.3.1"
 authors = [
   "Kevin Hoffman <alothien@gmail.com>",
   "Jarrod Overson <jsoverson@gmail.com>",
   "Phil Kedy <phil.kedy@gmail.com>",
+  "Flavio Castelli <flavio@castelli.me>",
 ]
 edition = "2021"
 description = "A wasmtime engine provider for the waPC host"
@@ -29,16 +30,16 @@ wasi = ["wasi-common", "wasi-cap-std-sync", "wasmtime-wasi"]
 [dependencies]
 wapc = { path = "../wapc", version = "1.0.0" }
 log = "0.4"
-wasmtime = "1.0"
+wasmtime = "2.0"
 anyhow = "1.0"
 thiserror = "1.0"
 cfg-if = "1.0.0"
 parking_lot = "0.11"
 
 # feature = wasi
-wasmtime-wasi = { version = "1.0", optional = true }
-wasi-common = { version = "1.0", optional = true }
-wasi-cap-std-sync = { version = "1.0", optional = true }
+wasmtime-wasi = { version = "2.0", optional = true }
+wasi-common = { version = "2.0", optional = true }
+wasi-cap-std-sync = { version = "2.0", optional = true }
 
 [dev-dependencies]
 wapc-codec = { path = "../wapc-codec" }

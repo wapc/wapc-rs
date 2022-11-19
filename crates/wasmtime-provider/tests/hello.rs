@@ -98,7 +98,7 @@ fn runs_wapc_timeout() -> Result<(), Error> {
   assert_eq!(result, "slept for 1 seconds");
 
   let callresult = guest.call("sleep", b"10");
-  let err = callresult.err().expect("a timeout error was supposed to happen");
+  let err = callresult.expect_err("a timeout error was supposed to happen");
   assert_eq!(
     err.to_string(),
     "Guest call failure: guest code interrupted, execution deadline exceeded".to_string()
