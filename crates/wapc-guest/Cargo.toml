@@ -28,4 +28,4 @@ codec = ["wapc-codec"]
 [dependencies]
 once_cell = "1.9"
 wapc-codec = { path = "../wapc-codec", optional = true, version = "1.0.0-alpha.0" }
-parking_lot = "0.11"
+parking_lot = "0.12"
