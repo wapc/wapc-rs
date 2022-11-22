@@ -378,11 +378,11 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
 
     match call {
       Ok(result) => Ok(result),
-      Err(trap) => {
-        error!("Failure invoking guest module handler: {:?}", trap);
-        let mut guest_error = trap.to_string();
-        if let Some(trap_code) = trap.trap_code() {
-          if matches!(trap_code, wasmtime::TrapCode::Interrupt) {
+      Err(err) => {
+        error!("Failure invoking guest module handler: {:?}", err);
+        let mut guest_error = err.to_string();
+        if let Some(trap) = err.downcast_ref::<wasmtime::Trap>() {
+          if matches!(trap, wasmtime::Trap::Interrupt) {
             guest_error = "guest code interrupted, execution deadline exceeded".to_owned();
           }
         }
@@ -430,15 +430,15 @@ impl WasmtimeEngineProvider {
         // generic `anyhow::Error` that doesn't allow nice handling of
         // errors
         let starter_func: TypedFunc<(), ()> = engine_inner.instance.read().get_typed_func(&mut self.store, starter)?;
-        starter_func.call(&mut self.store, ()).map_err(|trap| {
-          if let Some(trap_code) = trap.trap_code() {
-            if matches!(trap_code, wasmtime::TrapCode::Interrupt) {
+        starter_func.call(&mut self.store, ()).map_err(|err| {
+          if let Some(trap) = err.downcast_ref::<wasmtime::Trap>() {
+            if matches!(trap, wasmtime::Trap::Interrupt) {
               Error::InitializationFailedTimeout((*starter).to_owned())
             } else {
-              Error::InitializationFailed(trap.into())
+              Error::InitializationFailed(err.into())
             }
           } else {
-            Error::InitializationFailed(trap.into())
+            Error::InitializationFailed(err.into())
           }
         })?;
       }

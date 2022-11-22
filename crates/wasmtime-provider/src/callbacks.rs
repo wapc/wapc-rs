@@ -1,5 +1,6 @@
+use anyhow::anyhow;
 use wapc::{wapc_functions, HOST_NAMESPACE};
-use wasmtime::{AsContext, AsContextMut, Caller, Linker, Memory, StoreContext, Trap};
+use wasmtime::{AsContext, AsContextMut, Caller, Linker, Memory, StoreContext};
 
 use crate::errors::{Error, Result};
 use crate::WapcStore;
@@ -28,7 +29,7 @@ fn register_guest_request_func(linker: &mut Linker<WapcStore>) -> Result<()> {
           .data()
           .host
           .as_ref()
-          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+          .ok_or_else(|| anyhow!("host should have been set during the init"))?;
         let invocation = host.get_guest_request();
         let memory = get_caller_memory(&mut caller)?;
         if let Some(inv) = invocation {
@@ -56,11 +57,11 @@ fn register_console_log_func(linker: &mut Linker<WapcStore>) -> Result<()> {
           .data()
           .host
           .as_ref()
-          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+          .ok_or_else(|| anyhow!("host should have been set during the init"))?;
         let vec = get_vec_from_memory(caller.as_context(), memory, ptr, len);
 
         let msg = std::str::from_utf8(&vec)
-          .map_err(|e| Trap::new(format!("console_log: cannot convert message to UTF8: {:?}", e)))?;
+          .map_err(|e| anyhow!(format!("console_log: cannot convert message to UTF8: {:?}", e)))?;
 
         host.do_console_log(msg);
         Ok(())
@@ -93,18 +94,18 @@ fn register_host_call_func(linker: &mut Linker<WapcStore>) -> Result<()> {
           .data()
           .host
           .as_ref()
-          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+          .ok_or_else(|| anyhow!("host should have been set during the init"))?;
 
         let vec = get_vec_from_memory(caller.as_context(), memory, ptr, len);
         let bd_vec = get_vec_from_memory(caller.as_context(), memory, bd_ptr, bd_len);
         let bd = std::str::from_utf8(&bd_vec)
-          .map_err(|e| Trap::new(format!("host_call: cannot convert bd to UTF8: {:?}", e)))?;
+          .map_err(|e| anyhow!(format!("host_call: cannot convert bd to UTF8: {:?}", e)))?;
         let ns_vec = get_vec_from_memory(caller.as_context(), memory, ns_ptr, ns_len);
         let ns = std::str::from_utf8(&ns_vec)
-          .map_err(|e| Trap::new(format!("host_call: cannot convert ns to UTF8: {:?}", e)))?;
+          .map_err(|e| anyhow!(format!("host_call: cannot convert ns to UTF8: {:?}", e)))?;
         let op_vec = get_vec_from_memory(caller.as_context(), memory, op_ptr, op_len);
         let op = std::str::from_utf8(&op_vec)
-          .map_err(|e| Trap::new(format!("host_call: cannot convert op to UTF8: {:?}", e)))?;
+          .map_err(|e| anyhow!(format!("host_call: cannot convert op to UTF8: {:?}", e)))?;
 
         let result = host.do_host_call(bd, ns, op, &vec);
         Ok(result.unwrap_or(0))
@@ -128,7 +129,7 @@ fn register_host_response_func(linker: &mut Linker<WapcStore>) -> Result<()> {
           .data()
           .host
           .as_ref()
-          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+          .ok_or_else(|| anyhow!("host should have been set during the init"))?;
 
         if let Some(ref e) = host.get_host_response() {
           write_bytes_to_memory(caller.as_context_mut(), memory, ptr, e)?;
@@ -153,7 +154,7 @@ fn register_host_response_len_func(linker: &mut Linker<WapcStore>) -> Result<()>
           .data()
           .host
           .as_ref()
-          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+          .ok_or_else(|| anyhow!("host should have been set during the init"))?;
 
         let len = host.get_host_response().map_or_else(|| 0, |r| r.len()) as i32;
         Ok(len)
@@ -178,7 +179,7 @@ fn register_guest_response_func(linker: &mut Linker<WapcStore>) -> Result<()> {
           .data()
           .host
           .as_ref()
-          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+          .ok_or_else(|| anyhow!("host should have been set during the init"))?;
 
         let vec = get_vec_from_memory(caller.as_context(), memory, ptr, len);
         host.set_guest_response(vec);
@@ -203,11 +204,11 @@ fn register_guest_error_func(linker: &mut Linker<WapcStore>) -> Result<()> {
           .data()
           .host
           .as_ref()
-          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+          .ok_or_else(|| anyhow!("host should have been set during the init"))?;
 
         let vec = get_vec_from_memory(caller.as_context(), memory, ptr, len);
         let guest_err_msg = String::from_utf8(vec)
-          .map_err(|e| Trap::new(format!("guest_error_func: cannot convert message to UTF8: {:?}", e)))?;
+          .map_err(|e| anyhow!(format!("guest_error_func: cannot convert message to UTF8: {:?}", e)))?;
         host.set_guest_error(guest_err_msg);
         Ok(())
       },
@@ -230,7 +231,7 @@ fn register_host_error_func(linker: &mut Linker<WapcStore>) -> Result<()> {
           .data()
           .host
           .as_ref()
-          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+          .ok_or_else(|| anyhow!("host should have been set during the init"))?;
 
         if let Some(ref e) = host.get_host_error() {
           write_bytes_to_memory(caller.as_context_mut(), memory, ptr, e.as_bytes())?;
@@ -255,7 +256,7 @@ fn register_host_error_len_func(linker: &mut Linker<WapcStore>) -> Result<()> {
           .data()
           .host
           .as_ref()
-          .ok_or_else(|| Trap::new("host should have been set during the init"))?;
+          .ok_or_else(|| anyhow!("host should have been set during the init"))?;
 
         let len = host.get_host_error().map_or_else(|| 0, |r| r.len()) as i32;
         Ok(len)
@@ -268,13 +269,13 @@ fn register_host_error_len_func(linker: &mut Linker<WapcStore>) -> Result<()> {
   Ok(())
 }
 
-fn get_caller_memory<T>(caller: &mut Caller<T>) -> std::result::Result<Memory, Trap> {
+fn get_caller_memory<T>(caller: &mut Caller<T>) -> anyhow::Result<Memory> {
   let memory_export = caller
     .get_export("memory")
-    .ok_or_else(|| Trap::new("Cannot find 'mem' export"))?;
+    .ok_or_else(|| anyhow!("Cannot find 'mem' export"))?;
   memory_export
     .into_memory()
-    .ok_or_else(|| Trap::new("'mem' export cannot be converted into a Memory instance"))
+    .ok_or_else(|| anyhow!("'mem' export cannot be converted into a Memory instance"))
 }
 
 fn get_vec_from_memory<'a, T: 'a>(store: impl Into<StoreContext<'a, T>>, mem: Memory, ptr: i32, len: i32) -> Vec<u8> {
@@ -282,13 +283,8 @@ fn get_vec_from_memory<'a, T: 'a>(store: impl Into<StoreContext<'a, T>>, mem: Me
   data[ptr as usize..(ptr + len) as usize].to_vec()
 }
 
-fn write_bytes_to_memory(
-  store: impl AsContextMut,
-  memory: Memory,
-  ptr: i32,
-  slice: &[u8],
-) -> std::result::Result<(), Trap> {
+fn write_bytes_to_memory(store: impl AsContextMut, memory: Memory, ptr: i32, slice: &[u8]) -> anyhow::Result<()> {
   memory
     .write(store, ptr as usize, slice)
-    .map_err(|e| Trap::new(e.to_string()))
+    .map_err(|e| anyhow!(e.to_string()))
 }
