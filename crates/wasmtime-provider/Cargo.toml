@@ -37,7 +37,7 @@ cfg-if = "1.0.0"
 parking_lot = "0.12"
 
 # feature = wasi
-wasmtime-wasi = { version = "3.0", optional = true }
+wasmtime-wasi = { version = "4.0", optional = true }
 wasi-common = { version = "3.0", optional = true }
 wasi-cap-std-sync = { version = "3.0", optional = true }
 
