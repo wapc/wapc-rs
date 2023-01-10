@@ -452,6 +452,6 @@ impl WasmtimeEngineProvider {
 fn guest_call_fn(store: impl AsContextMut, instance: &Arc<RwLock<Instance>>) -> Result<TypedFunc<(i32, i32), i32>> {
   instance
     .read()
-    .get_typed_func::<(i32, i32), i32, _>(store, wapc_functions::GUEST_CALL)
+    .get_typed_func::<(i32, i32), i32>(store, wapc_functions::GUEST_CALL)
     .map_err(|_| errors::Error::GuestCallNotFound)
 }
