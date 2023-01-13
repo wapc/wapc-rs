@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::RwLock;
 
 use once_cell::sync::Lazy;
 
@@ -25,7 +25,7 @@ pub extern "C" fn __guest_call(op_len: i32, req_len: i32) -> i32 {
     opbuf.set_len(op_len as usize);
   };
 
-  REGISTRY.lock().unwrap().get(&opbuf).map_or_else(
+  REGISTRY.read().unwrap().get(&opbuf).map_or_else(
     || {
       let mut errmsg = b"No handler registered for function ".to_vec();
       errmsg.append(&mut opbuf);
@@ -85,11 +85,11 @@ extern "C" {
 
 type HandlerSignature = fn(&[u8]) -> CallResult;
 
-static REGISTRY: Lazy<Mutex<HashMap<Vec<u8>, HandlerSignature>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static REGISTRY: Lazy<RwLock<HashMap<Vec<u8>, HandlerSignature>>> = Lazy::new(|| RwLock::new(HashMap::new()));
 
 /// Register a handler for a waPC operation
 pub fn register_function(name: &str, f: fn(&[u8]) -> CallResult) {
-  REGISTRY.lock().unwrap().insert(name.as_bytes().to_vec(), f);
+  REGISTRY.write().unwrap().insert(name.as_bytes().to_vec(), f);
 }
 
 /// The function through which all host calls take place.
