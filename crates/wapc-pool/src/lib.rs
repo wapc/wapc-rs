@@ -44,7 +44,6 @@
   clippy::future_not_send,
   bad_style,
   clashing_extern_declarations,
-  const_err,
   dead_code,
   deprecated,
   explicit_outlives_requirements,
