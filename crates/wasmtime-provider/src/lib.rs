@@ -194,19 +194,14 @@ impl WasmtimeEngineProviderPre {
 
     cfg_if::cfg_if! {
       if #[cfg(feature = "wasi")] {
-        wasmtime_wasi::add_to_linker(&mut linker, |s| &mut s.wasi_ctx).unwrap();
+        wasmtime_wasi::add_to_linker(&mut linker, |s: &mut WapcStore| &mut s.wasi_ctx).unwrap();
       }
     };
 
     // register all the waPC host functions
     callbacks::add_to_linker(&mut linker)?;
 
-    // it's fine to set the `host` to None now, because the waPC host functions
-    // are not executed yet
-    let wapc_store = WapcStore::new(&wasi_params, None)?;
-    let mut store = Store::new(&engine, wapc_store);
-
-    let instance_pre = linker.instantiate_pre(&mut store, &module)?;
+    let instance_pre = linker.instantiate_pre(&module)?;
 
     Ok(Self {
       module,
@@ -401,7 +396,7 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
     );
 
     let module = Module::new(&self.engine, module)?;
-    self.instance_pre = self.linker.instantiate_pre(&mut self.store, &module)?;
+    self.instance_pre = self.linker.instantiate_pre(&module)?;
     let new_instance = self.instance_pre.instantiate(&mut self.store)?;
     *self.inner.as_ref().unwrap().instance.write() = new_instance;
 
