@@ -30,7 +30,7 @@ wasi = ["wasi-common", "wasi-cap-std-sync", "wasmtime-wasi"]
 [dependencies]
 wapc = { path = "../wapc", version = "1.0.0" }
 log = "0.4"
-wasmtime = "6.0"
+wasmtime = "7.0"
 anyhow = "1.0"
 thiserror = "1.0"
 cfg-if = "1.0.0"
