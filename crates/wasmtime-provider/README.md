@@ -5,12 +5,15 @@
 
 This is a pluggable engine provider for the [waPC](https://wapc.io) RPC exchange protocol. This engine implements `WebAssemblyEngineProvider` for the the Bytecode Alliance's [wasmtime](https://github.com/bytecodealliance/wasmtime) WebAssembly runtime.
 
-## Running the demo
+## Running ping demo
 
 ```ignore
 $ cargo run -p wasmtime-provider --example wasmtime-demo ./wasm/crates/wasm-basic/build/wasm_basic.wasm ping "hi"
 ```
-
+## Running codec and module hotswapping demo
+```ignore
+cargo run -p wasmtime-provider --example wasmtime-hash-mreplace something in wasmtime-provider
+```
 ## Example
 
 ```rust

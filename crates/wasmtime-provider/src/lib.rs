@@ -396,9 +396,14 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
     );
 
     let module = Module::new(&self.engine, module)?;
-    self.instance_pre = self.linker.instantiate_pre(&module)?;
+    self.module = module;
+    self.instance_pre = self.linker.instantiate_pre(&self.module)?;
     let new_instance = self.instance_pre.instantiate(&mut self.store)?;
-    *self.inner.as_ref().unwrap().instance.write() = new_instance;
+    if let Some(inner) = self.inner.as_mut() {
+      *inner.instance.write() = new_instance;
+      let gc = guest_call_fn(&mut self.store, &inner.instance)?;
+      inner.guest_call_fn = gc;
+    }
 
     Ok(self.initialize()?)
   }
