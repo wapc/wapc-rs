@@ -12,7 +12,7 @@ $ cargo run -p wasmtime-provider --example wasmtime-demo ./wasm/crates/wasm-basi
 ```
 ## Running codec and module hotswapping demo
 ```ignore
-cargo run -p wasmtime-provider --example wasmtime-hash-mreplace something in wasmtime-provider
+cargo run -p wasmtime-provider --example wasmtime-hash-mreplace AlexName 
 ```
 ## Example
 
