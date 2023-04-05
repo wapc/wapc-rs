@@ -394,7 +394,7 @@ mod tests {
     }
     let pool = HostPoolBuilder::new()
       .name("test")
-      .factory(move || WapcHost::new(Box::new(Test::default()), None).unwrap())
+      .factory(move || WapcHost::new(Box::<Test>::default(), None).unwrap())
       .min_threads(5)
       .max_threads(5)
       .build();
@@ -448,7 +448,7 @@ mod tests {
     }
     let pool = HostPoolBuilder::new()
       .name("test")
-      .factory(move || WapcHost::new(Box::new(Test::default()), None).unwrap())
+      .factory(move || WapcHost::new(Box::<Test>::default(), None).unwrap())
       .min_threads(1)
       .max_threads(5)
       .max_wait(Duration::from_millis(10))
