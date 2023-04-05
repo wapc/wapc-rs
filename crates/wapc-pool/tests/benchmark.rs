@@ -49,7 +49,7 @@ async fn benchmark() -> Result<(), errors::Error> {
 
   let now = Instant::now();
   let result =
-    try_join_all((0..num_calls).map(|num| pool.call("echo", serialize(&format!("hello world: {}", num)).unwrap())))
+    try_join_all((0..num_calls).map(|num| pool.call("echo", serialize(format!("hello world: {}", num)).unwrap())))
       .await;
   let duration_all = now.elapsed();
 
