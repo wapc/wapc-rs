@@ -1,9 +1,5 @@
-#![allow(unused_imports)]
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::Write;
-use std::{io::Read, time::Instant};
 use wapc_codec::messagepack::{deserialize, serialize};
 
 //simple struct to pass to wasm module and calc hash inside
