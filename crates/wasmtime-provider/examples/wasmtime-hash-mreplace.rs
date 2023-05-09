@@ -1,4 +1,3 @@
-use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use wapc_codec::messagepack::{deserialize, serialize};
 
