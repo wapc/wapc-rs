@@ -119,40 +119,19 @@ struct WapcStore {
 }
 
 impl WapcStore {
+  #[cfg(feature = "wasi")]
   fn new(wasi_params: &WasiParams, host: Option<Arc<ModuleState>>) -> Result<WapcStore> {
-    cfg_if::cfg_if! {
-      if #[cfg(feature = "wasi")] {
+    let preopened_dirs = wasi::compute_preopen_dirs(&wasi_params.preopened_dirs, &wasi_params.map_dirs)
+      .map_err(|e| errors::Error::WasiInitCtxError(format!("Cannot compute preopened dirs: {:?}", e)))?;
+    let wasi_ctx = wasi::init_ctx(&preopened_dirs, &wasi_params.argv, &wasi_params.env_vars)
+      .map_err(|e| errors::Error::WasiInitCtxError(e.to_string()))?;
 
-        let preopened_dirs = wasi::compute_preopen_dirs(
-            &wasi_params.preopened_dirs,
-            &wasi_params.map_dirs
-        ).map_err(|e|
-            errors::Error::WasiInitCtxError(format!("Cannot compute preopened dirs: {:?}", e)))?;
-        let wasi_ctx = wasi::init_ctx(
-            &preopened_dirs,
-            &wasi_params.argv,
-            &wasi_params.env_vars,
-        ).map_err(|e| errors::Error::WasiInitCtxError(e.to_string()))?;
+    Ok(WapcStore { wasi_ctx, host })
+  }
 
-        Ok(WapcStore{
-            wasi_ctx,
-            host,
-        })
-      } else {
-        if wasi.is_some() {
-            // this check is required because otherwise the `wasi` parameter
-            // would not be used when the feature `wasi` is not enabled.
-            // That would cause a compilation error because we do not allow unused
-            // code.
-            Err(errors::Error::WasiDisabled);
-        } else {
-          Ok(WapcStore{
-              wasi_ctx,
-              host,
-          })
-        }
-      }
-    }
+  #[cfg(not(feature = "wasi"))]
+  fn new(host: Option<Arc<ModuleState>>) -> WapcStore {
+    WapcStore { host }
   }
 }
 
@@ -221,7 +200,11 @@ impl WasmtimeEngineProviderPre {
   pub(crate) fn rehydrate(&self) -> Result<WasmtimeEngineProvider> {
     let engine = self.engine.clone();
 
+    #[cfg(feature = "wasi")]
     let wapc_store = WapcStore::new(&self.wasi_params, None)?;
+    #[cfg(not(feature = "wasi"))]
+    let wapc_store = WapcStore::new(None);
+
     let store = Store::new(&engine, wapc_store);
 
     Ok(WasmtimeEngineProvider {
@@ -254,7 +237,11 @@ impl Clone for WasmtimeEngineProvider {
   fn clone(&self) -> Self {
     let engine = self.engine.clone();
 
+    #[cfg(feature = "wasi")]
     let wapc_store = WapcStore::new(&self.wasi_params, None).unwrap();
+    #[cfg(not(feature = "wasi"))]
+    let wapc_store = WapcStore::new(None);
+
     let store = Store::new(&engine, wapc_store);
 
     match &self.inner {
@@ -339,7 +326,11 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
     host: Arc<ModuleState>,
   ) -> std::result::Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
     // create the proper store, now we have a value for `host`
+    #[cfg(feature = "wasi")]
     let wapc_store = WapcStore::new(&self.wasi_params, Some(host.clone()))?;
+    #[cfg(not(feature = "wasi"))]
+    let wapc_store = WapcStore::new(Some(host.clone()));
+
     self.store = Store::new(&self.engine, wapc_store);
 
     let instance = self.instance_pre.instantiate(&mut self.store)?;
