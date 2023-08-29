@@ -6,5 +6,6 @@ exclude = [
   "wasm/crates/wapc-guest-test",
   "wasm/crates/wapc-guest-timeout",
   "wasm/crates/wasm-calc-hash/module1",
-  "wasm/crates/wasm-calc-hash/module2"
+  "wasm/crates/wasm-calc-hash/module2",
 ]
+resolver = "2"
