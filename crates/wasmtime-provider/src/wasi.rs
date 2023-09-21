@@ -12,10 +12,12 @@ pub(crate) fn init_ctx(
 ) -> Result<WasiCtx, Box<dyn Error + Send + Sync>> {
   let mut ctx_builder = wasi_cap_std_sync::WasiCtxBuilder::new();
 
-  ctx_builder = ctx_builder.inherit_stdio().args(argv)?.envs(env)?;
+  ctx_builder.inherit_stdio();
+  ctx_builder.args(argv)?;
+  ctx_builder.envs(env)?;
 
   for (name, file) in preopen_dirs {
-    ctx_builder = ctx_builder.preopened_dir(file.try_clone()?, name)?;
+    ctx_builder.preopened_dir(file.try_clone()?, name)?;
   }
 
   Ok(ctx_builder.build())
