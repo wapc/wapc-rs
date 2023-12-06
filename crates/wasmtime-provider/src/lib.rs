@@ -156,7 +156,7 @@ struct EpochDeadlines {
 /// Can be used to quickly create a new instance of WasmtimeEngineProvider
 #[allow(missing_debug_implementations)]
 #[derive(Clone)]
-pub(crate) struct WasmtimeEngineProviderPre {
+pub struct WasmtimeEngineProviderPre {
   module: Module,
   wasi_params: WasiParams,
   engine: Engine,
@@ -197,7 +197,7 @@ impl WasmtimeEngineProviderPre {
   /// Note: from micro-benchmarking, this method is 10 microseconds faster than
   /// `WasmtimeEngineProvider::clone`. This isn't a significant gain to justify
   /// the exposure of this method to all the consumers of `wasmtime_provider`.
-  pub(crate) fn rehydrate(&self) -> Result<WasmtimeEngineProvider> {
+  pub fn rehydrate(&self) -> Result<WasmtimeEngineProvider> {
     let engine = self.engine.clone();
 
     #[cfg(feature = "wasi")]

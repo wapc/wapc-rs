@@ -106,7 +106,7 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
   /// Create a [`WasmtimeEngineProviderPre`] instance. This instance can then
   /// be reused as many time as wanted to quickly instantiate a [`WasmtimeEngineProvider`]
   /// by using the [`WasmtimeEngineProviderPre::rehydrate`] method.
-  pub(crate) fn build_pre(&self) -> Result<WasmtimeEngineProviderPre> {
+  pub fn build_pre(&self) -> Result<WasmtimeEngineProviderPre> {
     if self.module_bytes.is_some() && self.module.is_some() {
       return Err(Error::BuilderInvalidConfig(
         "`module_bytes` and `module` cannot be provided at the same time".to_owned(),
