@@ -99,7 +99,7 @@ use wasmtime::{AsContextMut, Engine, Instance, InstancePre, Linker, Module, Stor
 cfg_if::cfg_if! {
     if #[cfg(feature = "wasi")] {
         pub use wasmtime_wasi;
-        use wasmtime_wasi::WasiCtx;
+        use wasi_common::WasiCtx;
     }
 }
 
