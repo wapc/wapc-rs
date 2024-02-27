@@ -250,7 +250,10 @@ impl HostPoolBuilder {
   /// # use wapc_pool::HostPoolBuilder;
   /// # use wapc::WapcHost;
   /// # let bytes = std::fs::read("../../wasm/crates/wapc-guest-test/build/wapc_guest_test.wasm").unwrap();
-  /// let engine = wasmtime_provider::WasmtimeEngineProvider::new(&bytes, None).unwrap();
+  /// let engine = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
+  ///   .module_bytes(&bytes)
+  ///   .build()
+  ///   .unwrap();
   /// let pool = HostPoolBuilder::new()
   ///   .factory(move || {
   ///     let engine = engine.clone();
@@ -323,7 +326,9 @@ impl HostPoolBuilder {
   /// # use wapc_pool::HostPoolBuilder;
   /// # use wapc::WapcHost;
   /// # let bytes = std::fs::read("../../wasm/crates/wapc-guest-test/build/wapc_guest_test.wasm").unwrap();
-  /// let engine = wasmtime_provider::WasmtimeEngineProvider::new(&bytes, None).unwrap();
+  /// let engine = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
+  ///   .module_bytes(&bytes)
+  ///   .build().unwrap();
   /// let pool = HostPoolBuilder::new()
   ///   .factory(move || {
   ///     let engine = engine.clone();

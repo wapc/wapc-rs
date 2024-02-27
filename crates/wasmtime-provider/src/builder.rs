@@ -45,7 +45,7 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
   /// Provide a preinitialized [`wasmtime::Engine`]
   ///
   /// **Warning:** when used, engine specific options like
-  /// [`cache`](WasmtimeEngineProviderBuilder::enable_cache) and
+  /// [`cache`](crate::WasmtimeEngineProviderBuilder::enable_cache) and
   /// [`enable_epoch_interruptions`](WasmtimeEngineProviderBuilder::enable_epoch_interruptions)
   /// must be pre-configured by the user. `WasmtimeEngineProviderBuilder` won't be
   /// able to configure them at [`build`](WasmtimeEngineProviderBuilder::build) time.
