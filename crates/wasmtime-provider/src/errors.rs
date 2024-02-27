@@ -35,7 +35,7 @@ pub enum Error {
     err: String,
   },
 
-  /// Error caused by an invalid configuration of the [`WasmtimeEngineProviderBuilder`]
+  /// Error caused by an invalid configuration of the [`crate::WasmtimeEngineProviderBuilder`]
   #[error("Invalid WasmtimeEngineProviderBuilder configuration: {0}")]
   BuilderInvalidConfig(String),
 

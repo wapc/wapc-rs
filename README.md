@@ -29,7 +29,9 @@ use wapc_codec::messagepack::{deserialize, serialize};
 fn main() -> Result<(), errors::Error> {
     let buf = read("../wapc-guest-test/build/wapc_guest_test.wasm")?;
 
-    let engine = wasmtime_provider::WasmtimeEngineProvider::new(&buf, None)?;
+    let engine = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
+        .module_bytes(&buf)
+        .build()?;
     let guest = WapcHost::new(
         Box::new(engine),
         Some(Box::new(move |_a, _b, _c, _d, _e| Ok(vec![]))),

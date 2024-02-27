@@ -26,7 +26,7 @@ To make function calls, ensure that you provided a suitable host callback functi
 The following is an example of synchronous, bi-directional procedure calls between a WebAssembly host runtime and the guest module.
 
 ```rust
-use wasmtime_provider::WasmtimeEngineProvider; // Or Wasm3EngineProvider
+use wasmtime_provider::WasmtimeEngineProviderBuilder; // Or Wasm3EngineProvider
 use wapc::WapcHost;
 use std::error::Error;
 pub fn main() -> Result<(), Box<dyn Error>> {
@@ -42,7 +42,9 @@ pub fn main() -> Result<(), Box<dyn Error>> {
   let file = "../../wasm/crates/wasm-basic/build/wasm_basic.wasm";
   let module_bytes = std::fs::read(file)?;
 
-  let engine = WasmtimeEngineProvider::new(&module_bytes, None)?;
+  let engine = WasmtimeEngineProviderBuilder::new()
+    .module_bytes(&module_bytes)
+    .build()?;
   let host = WapcHost::new(Box::new(engine), Some(Box::new(host_callback)))?;
 
   let res = host.call("ping", b"payload bytes")?;

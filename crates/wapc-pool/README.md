@@ -18,7 +18,9 @@ use wapc_pool::HostPoolBuilder;
 async fn main() -> anyhow::Result<()> {
   let file = read("../../wasm/crates/wapc-guest-test/build/wapc_guest_test.wasm")?;
 
-  let engine = wasmtime_provider::WasmtimeEngineProvider::new(&file, None)?;
+  let engine = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
+    .module_bytes(&file)
+    .build()?;
 
   let pool = HostPoolBuilder::new()
     .name("pool example")
