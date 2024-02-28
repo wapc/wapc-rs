@@ -2,7 +2,7 @@ use std::error::Error;
 use std::ffi::OsStr;
 use std::path::{Component, Path};
 
-use wasi_cap_std_sync::{ambient_authority, Dir};
+use wasi_common::sync::{ambient_authority, Dir, WasiCtxBuilder};
 use wasi_common::WasiCtx;
 
 pub(crate) fn init_ctx(
@@ -10,7 +10,7 @@ pub(crate) fn init_ctx(
   argv: &[String],
   env: &[(String, String)],
 ) -> Result<WasiCtx, Box<dyn Error + Send + Sync>> {
-  let mut ctx_builder = wasi_cap_std_sync::WasiCtxBuilder::new();
+  let mut ctx_builder = WasiCtxBuilder::new();
 
   ctx_builder.inherit_stdio();
   ctx_builder.args(argv)?;
