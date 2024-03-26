@@ -175,7 +175,7 @@ impl WasmtimeEngineProviderPre {
 
     cfg_if::cfg_if! {
       if #[cfg(feature = "wasi")] {
-        wasmtime_wasi::add_to_linker(&mut linker, |s: &mut WapcStore| &mut s.wasi_ctx).unwrap();
+        wasi_common::sync::add_to_linker(&mut linker, |s: &mut WapcStore| &mut s.wasi_ctx).unwrap();
       }
     };
 
