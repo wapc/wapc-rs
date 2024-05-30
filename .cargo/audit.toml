@@ -1,0 +1,4 @@
+[advisories]
+ignore = [
+  "RUSTSEC-2024-0006", # shlex is a transitive dependency of wasm3. Unfortunately wasm3 is no longer maintained
+]
