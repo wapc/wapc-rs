@@ -30,15 +30,15 @@ wasi = ["wasi-common", "wasmtime-wasi"]
 [dependencies]
 wapc = { path = "../wapc", version = "1.1.0" }
 log = "0.4"
-wasmtime = "21.0"
+wasmtime = "22.0"
 anyhow = "1.0"
 thiserror = "1.0"
 cfg-if = "1.0.0"
 parking_lot = "0.12"
 serde = { version = "1.0", features = ["derive"] }
 # feature = wasi
-wasmtime-wasi = { version = "21.0", optional = true }
-wasi-common = { version = "21.0", optional = true }
+wasmtime-wasi = { version = "22.0", optional = true }
+wasi-common = { version = "22.0", optional = true }
 
 [dev-dependencies]
 wapc-codec = { path = "../wapc-codec" }
