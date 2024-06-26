@@ -1,0 +1,35 @@
+name: release
+on:
+  push:
+    tags:
+      - "wapc-codec-v[0-9]+.[0-9]+.[0-9]+"
+      - "wapc-guest-v[0-9]+.[0-9]+.[0-9]+"
+      - "wapc-pool-v[0-9]+.[0-9]+.[0-9]+"
+      - "wapc-v[0-9]+.[0-9]+.[0-9]+"
+      - "wasm3-provider-v[0-9]+.[0-9]+.[0-9]+"
+      - "wasmtime-provider-v[0-9]+.[0-9]+.[0-9]+"
+jobs:
+  publish:
+    name: publish to crates.io
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        crate:
+          - wapc
+          - wapc-codec
+          - wapc-guest
+          - wapc-pool
+          - wasm3-provider
+          - wasmtime-provider
+
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
+        with:
+          toolchain: stable
+          override: true
+
+      - name: publish ${{ matrix.crate }} to crates.io
+        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.crate))
+        run: cargo publish --token ${{ secrets.CARGOTOKEN }}
+        working-directory: ./crates/${{ matrix.crate }}
