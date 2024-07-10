@@ -50,7 +50,7 @@ wasm: $(WAPC_GUEST_WASM) $(TEST_WASI_WASM) $(TEST_WASM_WASM) $(TEST_WAPC_TIMEOUT
 
 .PHONY: check
 check:
-	cargo +nightly fmt --check
+	cargo fmt --check
 	cargo clippy --all --all-features --tests -- -D warnings
 
 .PHONY: tidy
