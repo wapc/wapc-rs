@@ -1,4 +1,4 @@
-title: Update Rust version inside of rust-toolchain file
+name: Update Rust version inside of rust-toolchain file
 
 scms:
   github:
@@ -6,15 +6,12 @@ scms:
     spec:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
-      directory: "/tmp/wapc-rs"
       owner: "{{ requiredEnv .github.owner }}"
       repository: "wapc-rs"
       token: "{{ requiredEnv .github.token }}"
       username: "{{ requiredEnv .github.user }}"
       branch: "{{ .github.branch }}"
       commitmessage:
-        type: "fix"
-        title: "Update Rust version"
         hidecredit: true
 
 sources:
@@ -25,22 +22,22 @@ sources:
       owner: rust-lang
       repository: rust
       token: "{{ requiredEnv .github.token }}"
-    transformers:
-      - find: '(\d+\.\d+\.\d+)'
+      versionfilter:
+        kind: semver
+        pattern: "*"
 
 targets:
   dataFile:
-    name: Bump Rust release
+    name: 'deps(rust): update Rust version to {{ source "rust-lang" }}'
     kind: toml
     scmid: github
     spec:
       file: "rust-toolchain.toml"
       key: toolchain.channel
 
-pullrequests:
+actions:
   default:
-    title: '[updatecli] Update Rust version to {{ source "rust-lang" }}'
-    kind: github
+    kind: github/pullrequest
     scmid: github
     spec:
       labels:
