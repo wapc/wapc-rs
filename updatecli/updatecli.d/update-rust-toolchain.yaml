@@ -1,0 +1,47 @@
+title: Update Rust version inside of rust-toolchain file
+
+scms:
+  github:
+    kind: github
+    spec:
+      user: "{{ .github.author }}"
+      email: "{{ .github.email }}"
+      directory: "/tmp/wapc-rs"
+      owner: "{{ requiredEnv .github.owner }}"
+      repository: "wapc-rs"
+      token: "{{ requiredEnv .github.token }}"
+      username: "{{ requiredEnv .github.user }}"
+      branch: "{{ .github.branch }}"
+      commitmessage:
+        type: "fix"
+        title: "Update Rust version"
+        hidecredit: true
+
+sources:
+  rust-lang:
+    name: Get the latest release of Rust from rust-lang
+    kind: githubrelease
+    spec:
+      owner: rust-lang
+      repository: rust
+      token: "{{ requiredEnv .github.token }}"
+    transformers:
+      - find: '(\d+\.\d+\.\d+)'
+
+targets:
+  dataFile:
+    name: Bump Rust release
+    kind: toml
+    scmid: github
+    spec:
+      file: "rust-toolchain.toml"
+      key: toolchain.channel
+
+pullrequests:
+  default:
+    title: '[updatecli] Update Rust version to {{ source "rust-lang" }}'
+    kind: github
+    scmid: github
+    spec:
+      labels:
+        - chore
