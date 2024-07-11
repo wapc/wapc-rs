@@ -1,0 +1,7 @@
+github:
+  owner: "UPDATECLI_GITHUB_OWNER"
+  token: "UPDATECLI_GITHUB_TOKEN"
+  branch: "master"
+  author: "updatecli bot"
+  email: "updatecli@wapc.io"
+  user: "UPDATECLI_GITHUB_OWNER"
