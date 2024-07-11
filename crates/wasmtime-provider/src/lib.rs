@@ -124,9 +124,9 @@ impl WapcStore {
   #[cfg(feature = "wasi")]
   fn new(wasi_params: &WasiParams, host: Option<Arc<ModuleState>>) -> Result<WapcStore> {
     let preopened_dirs = wasi::compute_preopen_dirs(&wasi_params.preopened_dirs, &wasi_params.map_dirs)
-      .map_err(|e| errors::Error::WasiInitCtxError(format!("Cannot compute preopened dirs: {:?}", e)))?;
+      .map_err(|e| Error::WasiInitCtxError(format!("Cannot compute preopened dirs: {:?}", e)))?;
     let wasi_ctx = wasi::init_ctx(&preopened_dirs, &wasi_params.argv, &wasi_params.env_vars)
-      .map_err(|e| errors::Error::WasiInitCtxError(e.to_string()))?;
+      .map_err(|e| Error::WasiInitCtxError(e.to_string()))?;
 
     Ok(WapcStore { wasi_ctx, host })
   }
@@ -370,7 +370,7 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
         let mut guest_error = err.to_string();
         if let Some(trap) = err.downcast_ref::<wasmtime::Trap>() {
           if matches!(trap, wasmtime::Trap::Interrupt) {
-            guest_error = "guest code interrupted, execution deadline exceeded".to_owned();
+            "guest code interrupted, execution deadline exceeded".clone_into(&mut guest_error);
           }
         }
         engine_inner.host.set_guest_error(guest_error);
@@ -404,7 +404,7 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
 
 impl WasmtimeEngineProvider {
   fn initialize(&mut self) -> Result<()> {
-    for starter in wapc::wapc_functions::REQUIRED_STARTS.iter() {
+    for starter in wapc_functions::REQUIRED_STARTS.iter() {
       if let Some(deadlines) = &self.epoch_deadlines {
         // the deadline counter must be set before invoking the wasm function
         self.store.set_epoch_deadline(deadlines.wapc_init);
@@ -445,5 +445,5 @@ fn guest_call_fn(store: impl AsContextMut, instance: &Arc<RwLock<Instance>>) -> 
   instance
     .read()
     .get_typed_func::<(i32, i32), i32>(store, wapc_functions::GUEST_CALL)
-    .map_err(|_| errors::Error::GuestCallNotFound)
+    .map_err(|_| Error::GuestCallNotFound)
 }

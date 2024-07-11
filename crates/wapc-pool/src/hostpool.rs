@@ -176,7 +176,7 @@ impl HostPool {
     let pool = self
       .pool
       .take()
-      .ok_or_else(|| wapc::errors::Error::from(crate::errors::Error::NoPool))?;
+      .ok_or_else(|| wapc::errors::Error::from(Error::NoPool))?;
 
     pool.shutdown_join();
     Ok(())

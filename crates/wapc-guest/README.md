@@ -29,4 +29,4 @@ fn ping(msg: &[u8]) -> wapc::CallResult {
 
 ## Building
 
-This crate is meant for projects targeting `wasm32-unknown-unknown` or `wasm32-wasi`.
+This crate is meant for projects targeting `wasm32-unknown-unknown` or `wasm32-wasip1`.

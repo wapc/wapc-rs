@@ -1,7 +1,7 @@
 .PHONY: build clean
 
 NAME=wapc_guest_timeout
-TARGET=wasm32-wasi
+TARGET=wasm32-wasip1
 
 build: build/$(NAME).wasm
 

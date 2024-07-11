@@ -262,7 +262,7 @@ impl WebAssemblyEngineProvider for Wasm3EngineProvider {
     }
 
     // Invoke all the starters in order (if they exist)
-    for starter in wapc::wapc_functions::REQUIRED_STARTS.iter() {
+    for starter in wapc_functions::REQUIRED_STARTS.iter() {
       let func = module.find_function::<(), ()>(starter);
       if let Ok(func) = func {
         if let Err(e) = func.call() {

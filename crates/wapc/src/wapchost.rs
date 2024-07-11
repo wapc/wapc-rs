@@ -11,7 +11,7 @@ use crate::{errors, HostCallback, Invocation};
 
 static GLOBAL_MODULE_COUNT: AtomicU64 = AtomicU64::new(1);
 
-type Result<T> = std::result::Result<T, crate::errors::Error>;
+type Result<T> = std::result::Result<T, errors::Error>;
 
 /// A WebAssembly host runtime for waPC-compliant modules
 ///
