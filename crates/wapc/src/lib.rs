@@ -79,31 +79,55 @@
 )]
 #![doc(html_logo_url = "https://avatars0.githubusercontent.com/u/54989751?s=200&v=4")]
 #![doc = include_str!("../README.md")]
-
-#[macro_use]
-extern crate log;
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod errors;
+pub mod wapc_functions;
+mod wapchost;
+mod wasi;
+
+#[cfg(feature = "async")]
+use core::future::Future;
 
 use std::error::Error;
+
+// sync exports
+pub use wapchost::modulestate::ModuleState;
+pub use wapchost::traits::{ModuleHost, WebAssemblyEngineProvider};
+pub use wapchost::WapcHost;
+
+// async exports
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub use wapchost::modulestate_async::ModuleStateAsync;
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub use wapchost::traits::{ModuleHostAsync, WebAssemblyEngineProviderAsync};
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub use wapchost::WapcHostAsync;
+
+pub use wasi::WasiParams;
 
 /// The host module name / namespace that guest modules must use for imports
 pub const HOST_NAMESPACE: &str = "wapc";
 
-/// A list of the function names that are part of each waPC conversation
-pub mod wapc_functions;
-
-mod wapchost;
-mod wasi;
-
-pub use wapchost::modulestate::ModuleState;
-pub use wapchost::traits::{ModuleHost, WebAssemblyEngineProvider};
-pub use wapchost::WapcHost;
-pub use wasi::WasiParams;
-
 /// The signature of a Host Callback function.
 pub type HostCallback =
   dyn Fn(u64, &str, &str, &str, &[u8]) -> Result<Vec<u8>, Box<dyn Error + Send + Sync>> + Sync + Send + 'static;
+
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+/// The signature of an async Host Callback function.
+pub type HostCallbackAsync = dyn Fn(
+    u64,
+    String,
+    String,
+    String,
+    Vec<u8>,
+  ) -> std::pin::Pin<Box<dyn Future<Output = Result<Vec<u8>, Box<dyn Error + Send + Sync>>> + Send>>
+  + Send
+  + Sync;
 
 #[derive(Debug, Clone)]
 /// Represents a waPC invocation, which is a combination of an operation string and the

@@ -26,9 +26,11 @@ To make function calls, ensure that you provided a suitable host callback functi
 The following is an example of synchronous, bi-directional procedure calls between a WebAssembly host runtime and the guest module.
 
 ```rust
-use wasmtime_provider::WasmtimeEngineProviderBuilder; // Or Wasm3EngineProvider
-use wapc::WapcHost;
 use std::error::Error;
+
+use wapc::WapcHost;
+use wasmtime_provider::WasmtimeEngineProviderBuilder; // Or Wasm3EngineProvider
+
 pub fn main() -> Result<(), Box<dyn Error>> {
 
   // Sample host callback that prints the operation a WASM module requested.
@@ -63,6 +65,67 @@ repositories:
 # Notes
 
 waPC is _reactive_. Hosts make requests and guests respond. During a request, guests can initiate calls back to the host and interact with the environment (via WASI). When a request is done the guest should be considered parked until the next request.
+
+# `async` Support
+
+A waPC-compliant WebAssembly module can be used in an asynchronous context. This can
+be done using a [`WapcHostAsync`] and a provider that implements the [`WebAssemblyEngineProviderAsync`] trait.
+Currently only the [`wasmtime-provider`](https://crates.io/crates/wasmtime-provider) crate
+provides an implementation of this trait.
+
+**Note:** the `async` support relies on the tokio runtime.
+
+## Example
+
+The following is an example of synchronous, bi-directional procedure calls between a WebAssembly host runtime and the guest module,
+all done inside an asynchronous context.
+
+```rust
+use std::error::Error;
+
+use wapc::{HostCallbackAsync, WapcHostAsync};
+use wasmtime_provider::WasmtimeEngineProviderBuilder;
+
+async fn host_callback(
+  id: u64,
+  bd: String,
+  ns: String,
+  op: String,
+  payload: Vec<u8>,
+) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+  println!(
+    "Guest {} invoked '{}->{}:{}' on the host with a payload of '{}'",
+    id,
+    bd,
+    ns,
+    op,
+    ::std::str::from_utf8(&payload).unwrap()
+  );
+  Ok(vec![])
+}
+
+#[tokio::main]
+pub async fn main() -> Result<(), Box<dyn Error>> {
+  let file = "../../wasm/crates/wasm-basic/build/wasm_basic.wasm";
+  let module_bytes = std::fs::read(file)?;
+
+  let engine = WasmtimeEngineProviderBuilder::new()
+    .module_bytes(&module_bytes)
+    .build_async()?;
+
+  let callback: Box<HostCallbackAsync> = Box::new(move |id, bd, ns, op, payload| {
+    let fut = host_callback(id, bd, ns, op, payload);
+    Box::pin(fut)
+  });
+
+  let host = WapcHostAsync::new(Box::new(engine), Some(callback)).await?;
+
+  let res = host.call("ping", b"payload bytes").await?;
+  assert_eq!(res, b"payload bytes");
+
+  Ok(())
+}
+```
 
 ## RPC Exchange Flow
 
