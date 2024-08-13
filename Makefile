@@ -60,3 +60,7 @@ tidy:
 .PHONY: test
 test: wasm
 	cargo test --workspace
+
+.PHONY: doc
+doc:
+	RUSTDOCFLAGS="--cfg docsrs -D warnings" cargo +nightly doc --all-features --no-deps
