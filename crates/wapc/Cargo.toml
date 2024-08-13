@@ -5,15 +5,24 @@ authors = [
   "Kevin Hoffman <alothien@gmail.com>",
   "Jarrod Overson <jsoverson@gmail.com>",
   "Phil Kedy <phil.kedy@gmail.com>",
+  "Flavio Castelli <flavio@castelli.me>",
 ]
 edition = "2021"
 description = "An engine-pluggable WebAssembly Host Runtime implementing the waPC protocol."
 license = "Apache-2.0"
 homepage = "https://wapc.io"
+repository = "https://github.com/wapc/wapc-rs"
 documentation = "https://docs.rs/wapc"
 readme = "README.md"
 keywords = ["sdk", "wapc", "webassembly", "wasm", "wasi"]
 categories = ["wasm", "api-bindings"]
+
+[features]
+default = ["async"]
+async = ["async-trait", "tokio"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [package.metadata.workspaces]
 independent = true
@@ -22,6 +31,10 @@ independent = true
 log = "0.4"
 parking_lot = "0.12"
 thiserror = "1.0"
+async-trait = { version = "0.1", optional = true }
+tokio = { version = "1", optional = true, default-features = false, features = [
+  "sync",
+] }
 
 [dev-dependencies]
 wasmtime-provider = { path = "../wasmtime-provider" }

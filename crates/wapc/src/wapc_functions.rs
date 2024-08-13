@@ -1,3 +1,5 @@
+//! A list of the function names that are part of each waPC conversation
+
 // -- Functions called by guest, exported by host
 /// The waPC protocol function `__console_log`
 pub const HOST_CONSOLE_LOG: &str = "__console_log";
