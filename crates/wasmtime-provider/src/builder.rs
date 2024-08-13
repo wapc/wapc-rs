@@ -1,6 +1,9 @@
 use crate::errors::{Error, Result};
 use crate::{WasmtimeEngineProvider, WasmtimeEngineProviderPre};
 
+#[cfg(feature = "async")]
+use crate::{WasmtimeEngineProviderAsync, WasmtimeEngineProviderAsyncPre};
+
 /// Used to build [`WasmtimeEngineProvider`](crate::WasmtimeEngineProvider) instances.
 #[allow(missing_debug_implementations)]
 #[derive(Default)]
@@ -12,6 +15,7 @@ pub struct WasmtimeEngineProviderBuilder<'a> {
   cache_enabled: bool,
   #[cfg(feature = "cache")]
   cache_path: Option<std::path::PathBuf>,
+  #[cfg(feature = "wasi")]
   wasi_params: Option<wapc::WasiParams>,
   epoch_deadlines: Option<crate::EpochDeadlines>,
 }
@@ -56,6 +60,8 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
   }
 
   /// WASI params
+  #[cfg(feature = "wasi")]
+  #[cfg_attr(docsrs, doc(cfg(feature = "wasi")))]
   #[must_use]
   pub fn wasi_params(mut self, wasi: wapc::WasiParams) -> Self {
     self.wasi_params = Some(wasi);
@@ -68,6 +74,7 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
   /// the [`WasmtimeEngineProviderBuilder::engine`] helper. In that case, it's up to the
   /// user to provide a [`wasmtime::Engine`] instance with the cache values properly configured.
   #[cfg(feature = "cache")]
+  #[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
   #[must_use]
   pub fn enable_cache(mut self, path: Option<&std::path::Path>) -> Self {
     self.cache_enabled = true;
@@ -118,7 +125,7 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
       ));
     }
 
-    let mut pre = match &self.engine {
+    let pre = match &self.engine {
       Some(e) => {
         let module = self.module_bytes.as_ref().map_or_else(
           || Ok(self.module.as_ref().unwrap().clone()),
@@ -131,7 +138,13 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
         // under the hood wasmtime does not create a new `Engine`, but
         // rather creates a new reference to it.
         // See https://docs.rs/wasmtime/latest/wasmtime/struct.Engine.html#engines-and-clone
-        WasmtimeEngineProviderPre::new(e.clone(), module, self.wasi_params.clone())
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "wasi")] {
+                WasmtimeEngineProviderPre::new(e.clone(), module, self.wasi_params.clone(), self.epoch_deadlines)
+            } else {
+                WasmtimeEngineProviderPre::new(e.clone(), module, self.epoch_deadlines)
+            }
+        }
       }
       None => {
         let mut config = wasmtime::Config::default();
@@ -146,7 +159,7 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
                     if let Some(cache) = &self.cache_path {
                       config.cache_config_load(cache)?;
                     } else if let Err(e) = config.cache_config_load_default() {
-                      warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
+                      log::warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
                     }
                 }
             }
@@ -159,10 +172,16 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
           |module_bytes| wasmtime::Module::new(&engine, module_bytes),
         )?;
 
-        WasmtimeEngineProviderPre::new(engine, module, self.wasi_params.clone())
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "wasi")] {
+                WasmtimeEngineProviderPre::new(engine, module, self.wasi_params.clone(), self.epoch_deadlines)
+            } else {
+                WasmtimeEngineProviderPre::new(engine, module, self.epoch_deadlines)
+
+            }
+        }
       }
     }?;
-    pre.epoch_deadlines = self.epoch_deadlines;
 
     Ok(pre)
   }
@@ -170,6 +189,96 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
   /// Create a `WasmtimeEngineProvider` instance
   pub fn build(&self) -> Result<WasmtimeEngineProvider> {
     let pre = self.build_pre()?;
+    pre.rehydrate()
+  }
+
+  /// Create a [`WasmtimeEngineProviderAsyncPre`] instance. This instance can then
+  /// be reused as many time as wanted to quickly instantiate a [`WasmtimeEngineProviderAsync`]
+  /// by using the [`WasmtimeEngineProviderAsyncPre::rehydrate`] method.
+  ///
+  /// **Warning:** if provided by the user, the [`wasmtime::Engine`] must have been
+  /// created with async support enabled otherwise the code will panic at runtime.
+  #[cfg(feature = "async")]
+  #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+  pub fn build_async_pre(&self) -> Result<WasmtimeEngineProviderAsyncPre> {
+    if self.module_bytes.is_some() && self.module.is_some() {
+      return Err(Error::BuilderInvalidConfig(
+        "`module_bytes` and `module` cannot be provided at the same time".to_owned(),
+      ));
+    }
+    if self.module_bytes.is_none() && self.module.is_none() {
+      return Err(Error::BuilderInvalidConfig(
+        "Neither `module_bytes` nor `module` have been provided".to_owned(),
+      ));
+    }
+
+    let pre = match &self.engine {
+      Some(e) => {
+        let module = self.module_bytes.as_ref().map_or_else(
+          || Ok(self.module.as_ref().unwrap().clone()),
+          |module_bytes| wasmtime::Module::new(e, module_bytes),
+        )?;
+
+        // note: we have to call `.clone()` because `e` is behind
+        // a shared reference and `Engine` does not implement `Copy`.
+        // However, cloning an `Engine` is a cheap operation because
+        // under the hood wasmtime does not create a new `Engine`, but
+        // rather creates a new reference to it.
+        // See https://docs.rs/wasmtime/latest/wasmtime/struct.Engine.html#engines-and-clone
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "wasi")] {
+                WasmtimeEngineProviderAsyncPre::new(e.clone(), module, self.wasi_params.clone(), self.epoch_deadlines)
+            } else {
+                WasmtimeEngineProviderAsyncPre::new(e.clone(), module, self.epoch_deadlines)
+            }
+        }
+      }
+      None => {
+        let mut config = wasmtime::Config::default();
+        config.async_support(true);
+
+        if self.epoch_deadlines.is_some() {
+          config.epoch_interruption(true);
+        }
+
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "cache")] {
+                  if self.cache_enabled {
+                    config.strategy(wasmtime::Strategy::Cranelift);
+                    if let Some(cache) = &self.cache_path {
+                      config.cache_config_load(cache)?;
+                    } else if let Err(e) = config.cache_config_load_default() {
+                      log::warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
+                    }
+                }
+            }
+        }
+
+        let engine = wasmtime::Engine::new(&config)?;
+
+        let module = self.module_bytes.as_ref().map_or_else(
+          || Ok(self.module.as_ref().unwrap().clone()),
+          |module_bytes| wasmtime::Module::new(&engine, module_bytes),
+        )?;
+
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "wasi")] {
+                WasmtimeEngineProviderAsyncPre::new(engine, module, self.wasi_params.clone(), self.epoch_deadlines)
+            } else {
+                WasmtimeEngineProviderAsyncPre::new(engine, module, self.epoch_deadlines)
+            }
+        }
+      }
+    }?;
+
+    Ok(pre)
+  }
+
+  /// Create a `WasmtimeEngineProviderAsync` instance
+  #[cfg(feature = "async")]
+  #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+  pub fn build_async(&self) -> Result<WasmtimeEngineProviderAsync> {
+    let pre = self.build_async_pre()?;
     pre.rehydrate()
   }
 }

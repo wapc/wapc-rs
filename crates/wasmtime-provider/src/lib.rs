@@ -78,64 +78,39 @@
   missing_docs
 )]
 #![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod callbacks;
+#[cfg(feature = "async")]
+mod callbacks_async;
 #[cfg(feature = "wasi")]
 mod wasi;
 
-/// The crate's error module
+mod provider;
+pub use provider::{WasmtimeEngineProvider, WasmtimeEngineProviderPre};
+
+#[cfg(feature = "async")]
+mod provider_async;
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub use provider_async::{WasmtimeEngineProviderAsync, WasmtimeEngineProviderAsyncPre};
+
+mod store;
+
+#[cfg(feature = "async")]
+mod store_async;
+
 pub mod errors;
-use errors::{Error, Result};
 
 mod builder;
 pub use builder::WasmtimeEngineProviderBuilder;
-use parking_lot::RwLock;
-use wapc::{wapc_functions, ModuleState, WasiParams, WebAssemblyEngineProvider};
+
 // export wasmtime and wasmtime_wasi, so that consumers of this crate can use
 // the very same version
 pub use wasmtime;
-use wasmtime::{AsContextMut, Engine, Instance, InstancePre, Linker, Module, Store, TypedFunc};
-
-cfg_if::cfg_if! {
-    if #[cfg(feature = "wasi")] {
-        pub use wasmtime_wasi;
-        use wasi_common::WasiCtx;
-    }
-}
-
-use std::sync::Arc;
-
-#[macro_use]
-extern crate log;
-
-struct EngineInner {
-  instance: Arc<RwLock<Instance>>,
-  guest_call_fn: TypedFunc<(i32, i32), i32>,
-  host: Arc<ModuleState>,
-}
-
-struct WapcStore {
-  #[cfg(feature = "wasi")]
-  wasi_ctx: WasiCtx,
-  host: Option<Arc<ModuleState>>,
-}
-
-impl WapcStore {
-  #[cfg(feature = "wasi")]
-  fn new(wasi_params: &WasiParams, host: Option<Arc<ModuleState>>) -> Result<WapcStore> {
-    let preopened_dirs = wasi::compute_preopen_dirs(&wasi_params.preopened_dirs, &wasi_params.map_dirs)
-      .map_err(|e| Error::WasiInitCtxError(format!("Cannot compute preopened dirs: {:?}", e)))?;
-    let wasi_ctx = wasi::init_ctx(&preopened_dirs, &wasi_params.argv, &wasi_params.env_vars)
-      .map_err(|e| Error::WasiInitCtxError(e.to_string()))?;
-
-    Ok(WapcStore { wasi_ctx, host })
-  }
-
-  #[cfg(not(feature = "wasi"))]
-  fn new(host: Option<Arc<ModuleState>>) -> WapcStore {
-    WapcStore { host }
-  }
-}
+#[cfg(feature = "wasi")]
+#[cfg_attr(docsrs, doc(cfg(feature = "wasi")))]
+pub use wasmtime_wasi;
 
 /// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
 ///
@@ -151,299 +126,4 @@ struct EpochDeadlines {
 
   /// Deadline for user-defined waPC function computation. Expressed in number of epoch ticks
   wapc_func: u64,
-}
-
-/// A pre initialized WasmtimeEngineProvider
-///
-/// Can be used to quickly create a new instance of WasmtimeEngineProvider
-#[allow(missing_debug_implementations)]
-#[derive(Clone)]
-pub struct WasmtimeEngineProviderPre {
-  module: Module,
-  wasi_params: WasiParams,
-  engine: Engine,
-  linker: Linker<WapcStore>,
-  instance_pre: InstancePre<WapcStore>,
-  epoch_deadlines: Option<EpochDeadlines>,
-}
-
-impl WasmtimeEngineProviderPre {
-  fn new(engine: Engine, module: Module, wasi: Option<WasiParams>) -> Result<Self> {
-    let mut linker: Linker<WapcStore> = Linker::new(&engine);
-
-    let wasi_params = wasi.unwrap_or_default();
-
-    cfg_if::cfg_if! {
-      if #[cfg(feature = "wasi")] {
-        wasi_common::sync::add_to_linker(&mut linker, |s: &mut WapcStore| &mut s.wasi_ctx).unwrap();
-      }
-    };
-
-    // register all the waPC host functions
-    callbacks::add_to_linker(&mut linker)?;
-
-    let instance_pre = linker.instantiate_pre(&module)?;
-
-    Ok(Self {
-      module,
-      wasi_params,
-      engine,
-      linker,
-      instance_pre,
-      epoch_deadlines: None,
-    })
-  }
-
-  /// Create an instance of [`WasmtimeEngineProvider`] ready to be consumed
-  ///
-  /// Note: from micro-benchmarking, this method is 10 microseconds faster than
-  /// `WasmtimeEngineProvider::clone`. This isn't a significant gain to justify
-  /// the exposure of this method to all the consumers of `wasmtime_provider`.
-  pub fn rehydrate(&self) -> Result<WasmtimeEngineProvider> {
-    let engine = self.engine.clone();
-
-    #[cfg(feature = "wasi")]
-    let wapc_store = WapcStore::new(&self.wasi_params, None)?;
-    #[cfg(not(feature = "wasi"))]
-    let wapc_store = WapcStore::new(None);
-
-    let store = Store::new(&engine, wapc_store);
-
-    Ok(WasmtimeEngineProvider {
-      module: self.module.clone(),
-      inner: None,
-      engine,
-      epoch_deadlines: self.epoch_deadlines,
-      linker: self.linker.clone(),
-      instance_pre: self.instance_pre.clone(),
-      store,
-      wasi_params: self.wasi_params.clone(),
-    })
-  }
-}
-
-/// A waPC engine provider that encapsulates the Wasmtime WebAssembly runtime
-#[allow(missing_debug_implementations)]
-pub struct WasmtimeEngineProvider {
-  module: Module,
-  wasi_params: WasiParams,
-  inner: Option<EngineInner>,
-  engine: Engine,
-  linker: Linker<WapcStore>,
-  store: Store<WapcStore>,
-  instance_pre: InstancePre<WapcStore>,
-  epoch_deadlines: Option<EpochDeadlines>,
-}
-
-impl Clone for WasmtimeEngineProvider {
-  fn clone(&self) -> Self {
-    let engine = self.engine.clone();
-
-    #[cfg(feature = "wasi")]
-    let wapc_store = WapcStore::new(&self.wasi_params, None).unwrap();
-    #[cfg(not(feature = "wasi"))]
-    let wapc_store = WapcStore::new(None);
-
-    let store = Store::new(&engine, wapc_store);
-
-    match &self.inner {
-      Some(state) => {
-        let mut new = Self {
-          module: self.module.clone(),
-          inner: None,
-          engine,
-          epoch_deadlines: self.epoch_deadlines,
-          linker: self.linker.clone(),
-          instance_pre: self.instance_pre.clone(),
-          store,
-          wasi_params: self.wasi_params.clone(),
-        };
-        new.init(state.host.clone()).unwrap();
-        new
-      }
-      None => Self {
-        module: self.module.clone(),
-        inner: None,
-        engine,
-        epoch_deadlines: self.epoch_deadlines,
-        linker: self.linker.clone(),
-        instance_pre: self.instance_pre.clone(),
-        store,
-        wasi_params: self.wasi_params.clone(),
-      },
-    }
-  }
-}
-
-impl WasmtimeEngineProvider {
-  /// Creates a new instance of a [WasmtimeEngineProvider].
-  #[deprecated(
-    since = "1.2.0",
-    note = "please use `WasmtimeEngineProviderBuilder` instead to create a `WasmtimeEngineProvider`"
-  )]
-  #[allow(deprecated)]
-  pub fn new(buf: &[u8], wasi: Option<WasiParams>) -> Result<WasmtimeEngineProvider> {
-    let engine = Engine::default();
-    Self::new_with_engine(buf, engine, wasi)
-  }
-
-  #[cfg(feature = "cache")]
-  #[allow(deprecated)]
-  /// Creates a new instance of a [WasmtimeEngineProvider] with caching enabled.
-  #[deprecated(
-    since = "1.2.0",
-    note = "please use `WasmtimeEngineProviderBuilder` instead to create a `WasmtimeEngineProvider`"
-  )]
-  pub fn new_with_cache(
-    buf: &[u8],
-    wasi: Option<WasiParams>,
-    cache_path: Option<&std::path::Path>,
-  ) -> Result<WasmtimeEngineProvider> {
-    let mut config = wasmtime::Config::new();
-    config.strategy(wasmtime::Strategy::Cranelift);
-    if let Some(cache) = cache_path {
-      config.cache_config_load(cache)
-    } else {
-      config.cache_config_load_default()
-    }?;
-    let engine = Engine::new(&config)?;
-    Self::new_with_engine(buf, engine, wasi)
-  }
-
-  /// Creates a new instance of a [WasmtimeEngineProvider] from a separately created [wasmtime::Engine].
-  #[deprecated(
-    since = "1.2.0",
-    note = "please use `WasmtimeEngineProviderBuilder` instead to create a `WasmtimeEngineProvider`"
-  )]
-  pub fn new_with_engine(buf: &[u8], engine: Engine, wasi: Option<WasiParams>) -> Result<Self> {
-    let module = Module::new(&engine, buf)?;
-    let pre = WasmtimeEngineProviderPre::new(engine, module, wasi)?;
-    pre.rehydrate()
-  }
-}
-
-impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
-  fn init(
-    &mut self,
-    host: Arc<ModuleState>,
-  ) -> std::result::Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-    // create the proper store, now we have a value for `host`
-    #[cfg(feature = "wasi")]
-    let wapc_store = WapcStore::new(&self.wasi_params, Some(host.clone()))?;
-    #[cfg(not(feature = "wasi"))]
-    let wapc_store = WapcStore::new(Some(host.clone()));
-
-    self.store = Store::new(&self.engine, wapc_store);
-
-    let instance = self.instance_pre.instantiate(&mut self.store)?;
-
-    let instance_ref = Arc::new(RwLock::new(instance));
-    let gc = guest_call_fn(&mut self.store, &instance_ref)?;
-    self.inner = Some(EngineInner {
-      instance: instance_ref,
-      guest_call_fn: gc,
-      host,
-    });
-    self.initialize()?;
-    Ok(())
-  }
-
-  fn call(
-    &mut self,
-    op_length: i32,
-    msg_length: i32,
-  ) -> std::result::Result<i32, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-    if let Some(deadlines) = &self.epoch_deadlines {
-      // the deadline counter must be set before invoking the wasm function
-      self.store.set_epoch_deadline(deadlines.wapc_func);
-    }
-
-    let engine_inner = self.inner.as_ref().unwrap();
-    let call = engine_inner
-      .guest_call_fn
-      .call(&mut self.store, (op_length, msg_length));
-
-    match call {
-      Ok(result) => Ok(result),
-      Err(err) => {
-        error!("Failure invoking guest module handler: {:?}", err);
-        let mut guest_error = err.to_string();
-        if let Some(trap) = err.downcast_ref::<wasmtime::Trap>() {
-          if matches!(trap, wasmtime::Trap::Interrupt) {
-            "guest code interrupted, execution deadline exceeded".clone_into(&mut guest_error);
-          }
-        }
-        engine_inner.host.set_guest_error(guest_error);
-        Ok(0)
-      }
-    }
-  }
-
-  fn replace(
-    &mut self,
-    module: &[u8],
-  ) -> std::result::Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-    info!(
-      "HOT SWAP - Replacing existing WebAssembly module with new buffer, {} bytes",
-      module.len()
-    );
-
-    let module = Module::new(&self.engine, module)?;
-    self.module = module;
-    self.instance_pre = self.linker.instantiate_pre(&self.module)?;
-    let new_instance = self.instance_pre.instantiate(&mut self.store)?;
-    if let Some(inner) = self.inner.as_mut() {
-      *inner.instance.write() = new_instance;
-      let gc = guest_call_fn(&mut self.store, &inner.instance)?;
-      inner.guest_call_fn = gc;
-    }
-
-    Ok(self.initialize()?)
-  }
-}
-
-impl WasmtimeEngineProvider {
-  fn initialize(&mut self) -> Result<()> {
-    for starter in wapc_functions::REQUIRED_STARTS.iter() {
-      if let Some(deadlines) = &self.epoch_deadlines {
-        // the deadline counter must be set before invoking the wasm function
-        self.store.set_epoch_deadline(deadlines.wapc_init);
-      }
-
-      let engine_inner = self.inner.as_ref().unwrap();
-      if engine_inner
-        .instance
-        .read()
-        .get_export(&mut self.store, starter)
-        .is_some()
-      {
-        // Need to get a `wasmtime::TypedFunc` because its `call` method
-        // can return a Trap error. Non-typed functions instead return a
-        // generic `anyhow::Error` that doesn't allow nice handling of
-        // errors
-        let starter_func: TypedFunc<(), ()> = engine_inner.instance.read().get_typed_func(&mut self.store, starter)?;
-        starter_func.call(&mut self.store, ()).map_err(|err| {
-          if let Some(trap) = err.downcast_ref::<wasmtime::Trap>() {
-            if matches!(trap, wasmtime::Trap::Interrupt) {
-              Error::InitializationFailedTimeout((*starter).to_owned())
-            } else {
-              Error::InitializationFailed(err.into())
-            }
-          } else {
-            Error::InitializationFailed(err.into())
-          }
-        })?;
-      }
-    }
-    Ok(())
-  }
-}
-
-// Called once, then the result is cached. This returns a `Func` that corresponds
-// to the `__guest_call` export
-fn guest_call_fn(store: impl AsContextMut, instance: &Arc<RwLock<Instance>>) -> Result<TypedFunc<(i32, i32), i32>> {
-  instance
-    .read()
-    .get_typed_func::<(i32, i32), i32>(store, wapc_functions::GUEST_CALL)
-    .map_err(|_| Error::GuestCallNotFound)
 }

@@ -5,16 +5,7 @@
 
 This is a pluggable engine provider for the [waPC](https://wapc.io) RPC exchange protocol. This engine implements `WebAssemblyEngineProvider` for the the Bytecode Alliance's [wasmtime](https://github.com/bytecodealliance/wasmtime) WebAssembly runtime.
 
-## Running ping demo
-
-```ignore
-$ cargo run -p wasmtime-provider --example wasmtime-demo ./wasm/crates/wasm-basic/build/wasm_basic.wasm ping "hi"
-```
-## Running codec and module hotswapping demo
-```ignore
-cargo run -p wasmtime-provider --example wasmtime-hash-mreplace AlexName 
-```
-## Example
+## Usage
 
 ```rust
 use wasmtime_provider::WasmtimeEngineProviderBuilder;
@@ -44,6 +35,41 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
   Ok(())
 }
+```
+
+### `async` Support
+
+The `async` feature enables the usage of this provider inside of an `async` context.
+
+**Note:** this feature relies on the tokio runtime.
+
+Check the [`WasmtimeEngineProviderAsync`] for more details.
+
+### Creating a new instance
+
+The [`WasmtimeEngineProviderBuilder`] is used to create new instances of [`WasmtimeEngineProvider`]
+and [`WasmtimeEngineProviderAsync`].
+
+Fresh instances of the engines can be created by using pre-initialized instances
+like [`WasmtimeEngineProviderPre`] and [`WasmtimeEngineProviderAsyncPre`].
+
+## Examples
+
+### Running ping demo
+
+```custom,{.language-bash}
+cargo run -p wasmtime-provider \
+    --example wasmtime-demo \
+    ./wasm/crates/wasm-basic/build/wasm_basic.wasm \
+    ping "hi"
+```
+
+### Running codec and module hotswapping demo
+
+```custom,{.language-bash}
+cargo run -p wasmtime-provider \
+    --example wasmtime-hash-mreplace \
+    AlexName
 ```
 
 ## See also
