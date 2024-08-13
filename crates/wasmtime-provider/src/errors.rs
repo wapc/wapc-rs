@@ -1,3 +1,5 @@
+//! The crate's error module
+
 /// A convenience wrapper of `Result` that relies on
 /// [`wasmtime_provider::errors::Error`](crate::errors::Error)
 /// to hold errors

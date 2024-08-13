@@ -2,7 +2,7 @@ use std::error::Error;
 use std::ffi::OsStr;
 use std::path::{Component, Path};
 
-use wasi_common::sync::{ambient_authority, Dir, WasiCtxBuilder};
+use cap_std::{ambient_authority, fs::Dir};
 use wasi_common::WasiCtx;
 
 pub(crate) fn init_ctx(
@@ -10,7 +10,26 @@ pub(crate) fn init_ctx(
   argv: &[String],
   env: &[(String, String)],
 ) -> Result<WasiCtx, Box<dyn Error + Send + Sync>> {
-  let mut ctx_builder = WasiCtxBuilder::new();
+  let mut ctx_builder = wasi_common::sync::WasiCtxBuilder::new();
+
+  ctx_builder.inherit_stdio();
+  ctx_builder.args(argv)?;
+  ctx_builder.envs(env)?;
+
+  for (name, file) in preopen_dirs {
+    ctx_builder.preopened_dir(file.try_clone()?, name)?;
+  }
+
+  Ok(ctx_builder.build())
+}
+
+#[cfg(feature = "async")]
+pub(crate) fn init_ctx_async(
+  preopen_dirs: &[(String, Dir)],
+  argv: &[String],
+  env: &[(String, String)],
+) -> Result<WasiCtx, Box<dyn Error + Send + Sync>> {
+  let mut ctx_builder = wasi_common::tokio::WasiCtxBuilder::new();
 
   ctx_builder.inherit_stdio();
   ctx_builder.args(argv)?;

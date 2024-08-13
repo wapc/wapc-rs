@@ -9,9 +9,18 @@ MAKEFLAGS += --no-print-directory
 
 .PHONY: test
 test:
+	@echo "Running tests with default features"
 	cargo test
+	@echo "Running tests with cache feature enabled"
+	cargo test --no-default-features --features cache
+	@echo "Running tests with default features disabled"
 	cargo test --no-default-features
-	cargo test --features cache
+	@echo "Running tests with only cache feature enabled"
+	cargo test --no-default-features --features cache
+	@echo "Running tests with only wasi feature enabled"
+	cargo test --no-default-features --features wasi
+	@echo "Running tests with only async feature enabled"
+	cargo test --no-default-features --features async
 
 .PHONY: lint
 lint:

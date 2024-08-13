@@ -3,7 +3,7 @@ use wapc::{wapc_functions, HOST_NAMESPACE};
 use wasmtime::{AsContext, AsContextMut, Caller, Linker, Memory, StoreContext};
 
 use crate::errors::{Error, Result};
-use crate::WapcStore;
+use crate::store::WapcStore;
 
 pub(crate) fn add_to_linker(linker: &mut Linker<WapcStore>) -> Result<()> {
   register_guest_request_func(linker)?;
