@@ -1,6 +1,6 @@
 [package]
 name = "wasmtime-provider"
-version = "1.20.0"
+version = "1.21.0"
 authors = [
   "Kevin Hoffman <alothien@gmail.com>",
   "Jarrod Overson <jsoverson@gmail.com>",
