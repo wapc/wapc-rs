@@ -1,4 +1,5 @@
+
 [toolchain]
-channel = "1.81.0"
-components = ["rustfmt", "clippy", "rust-analyzer"]
-targets = ["wasm32-wasip1", "wasm32-unknown-unknown"]
+  channel = "1.82.0"
+  components = ["rustfmt", "clippy", "rust-analyzer"]
+  targets = ["wasm32-wasip1", "wasm32-unknown-unknown"]
