@@ -1,10 +1,11 @@
 [package]
 name = "wapc-guest"
-version = "1.1.0"
+version = "1.2.0"
 authors = [
   "Kevin Hoffman <alothien@gmail.com>",
   "Jarrod Overson <jsoverson@gmail.com>",
   "Phil Kedy <phil.kedy@gmail.com>",
+  "Flavio Castelli <flavio@castelli.me>",
 ]
 edition = "2021"
 description = "Guest SDK for building waPC-compliant WebAssembly Modules"
@@ -26,6 +27,6 @@ default = []
 codec = ["wapc-codec"]
 
 [dependencies]
-once_cell = "1.9"
+once_cell = "1.20"
 wapc-codec = { path = "../wapc-codec", optional = true, version = "1.1.0" }
 parking_lot = "0.12"
