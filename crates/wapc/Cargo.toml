@@ -1,6 +1,6 @@
 [package]
 name = "wapc"
-version = "2.0.0"
+version = "2.1.0"
 authors = [
   "Kevin Hoffman <alothien@gmail.com>",
   "Jarrod Overson <jsoverson@gmail.com>",
@@ -30,7 +30,7 @@ independent = true
 [dependencies]
 log = "0.4"
 parking_lot = "0.12"
-thiserror = "1.0"
+thiserror = "2.0"
 async-trait = { version = "0.1", optional = true }
 tokio = { version = "1", optional = true, default-features = false, features = [
   "sync",
