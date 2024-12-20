@@ -1,3 +1,11 @@
+> **WARNING:** this crate is temporarily disabled.
+> 
+> Unfortunately the `wasm3` crate is no longer maintained. It's no longer building
+> and it's also bringing vulnerable dependencies into our tree.
+>
+> We will be happy to enable this crate again once the `wasm3` finds a new maintainer
+> and the vulnerabilities are fixed.
+
 # Wasm3 Engine Provider
 
 ![crates.io](https://img.shields.io/crates/v/wasm3-provider.svg)

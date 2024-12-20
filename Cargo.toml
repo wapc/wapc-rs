@@ -1,6 +1,7 @@
 [workspace]
 members = ["crates/*"]
 exclude = [
+  "crates/wasm3-provider",              # this is temporarily disabled since the crate is no longer maintained. We hope a new maintainer will step up.
   "wasm/crates/wasm-basic",
   "wasm/crates/wasi-basic",
   "wasm/crates/wapc-guest-test",
