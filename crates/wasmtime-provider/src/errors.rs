@@ -10,7 +10,7 @@ pub(crate) type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
   /// Wasmtime initialization failed
   #[error("Initialization failed: {0}")]
-  InitializationFailed(Box<dyn std::error::Error + Send + Sync>),
+  InitializationFailed(String),
 
   /// Wasmtime initialization failed
   #[error("Initialization failed: {0} init interrupted, execution deadline exceeded")]
