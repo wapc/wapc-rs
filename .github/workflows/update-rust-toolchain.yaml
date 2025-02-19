@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
 
       - name: Install Updatecli in the runner
-        uses: updatecli/updatecli-action@79983ec58a76fe0c87fc76f5a5c7ef8df0bb36c4 # v2.77.0
+        uses: updatecli/updatecli-action@7c525cd7dca85b45cb3d72a7c7fc9c0cc016160e # v2.78.0
 
       - name: Update rust version inside of rust-toolchain file
         id: update_rust_toolchain
