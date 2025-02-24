@@ -40,7 +40,7 @@ async = [
 [dependencies]
 wapc = { path = "../wapc", version = "2.1.0" }
 log = "0.4"
-wasmtime = { version = "29.0", default-features = false, features = [
+wasmtime = { version = "30.0", default-features = false, features = [
   'cache',
   'gc',
   'gc-drc',
