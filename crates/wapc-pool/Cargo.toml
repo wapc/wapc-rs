@@ -29,7 +29,7 @@ tokio = { version = "1", features = ["sync"] }
 futures = "0.3"
 tokio = { version = "1", features = ["full"] }
 test-log = "0.2"
-env_logger = "0.10"
+env_logger = "0.11"
 wasmtime-provider = { path = "../wasmtime-provider" }
 wapc-codec = { path = "../wapc-codec" }
 anyhow = "1.0"
