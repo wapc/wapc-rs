@@ -1,6 +1,5 @@
 use crate::errors::{Error, Result};
 use crate::{WasmtimeEngineProvider, WasmtimeEngineProviderPre};
-
 #[cfg(feature = "async")]
 use crate::{WasmtimeEngineProviderAsync, WasmtimeEngineProviderAsyncPre};
 
@@ -154,13 +153,23 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
 
         cfg_if::cfg_if! {
             if #[cfg(feature = "cache")] {
-                  if self.cache_enabled {
+                if self.cache_enabled {
                     config.strategy(wasmtime::Strategy::Cranelift);
-                    if let Some(cache) = &self.cache_path {
-                      config.cache_config_load(cache)?;
-                    } else if let Err(e) = config.cache_config_load_default() {
-                      log::warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
-                    }
+                    let cache = self.cache_path.as_ref().map_or_else(
+                        || wasmtime::CacheConfig::from_file(None).and_then(wasmtime::Cache::new),
+                        |cache_path| {
+                            let mut cache_config = wasmtime::CacheConfig::new();
+                            cache_config.with_directory(cache_path);
+                            wasmtime::Cache::new(cache_config)
+                        }
+                    ).map_or_else(
+                        |e| {
+                            log::warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
+                            None
+                        },
+                        Some,
+                    );
+                    config.cache(cache);
                 }
             }
         }
@@ -245,11 +254,21 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
             if #[cfg(feature = "cache")] {
                   if self.cache_enabled {
                     config.strategy(wasmtime::Strategy::Cranelift);
-                    if let Some(cache) = &self.cache_path {
-                      config.cache_config_load(cache)?;
-                    } else if let Err(e) = config.cache_config_load_default() {
-                      log::warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
-                    }
+                    let cache = self.cache_path.as_ref().map_or_else(
+                        || wasmtime::CacheConfig::from_file(None).and_then(wasmtime::Cache::new),
+                        |cache_path| {
+                            let mut cache_config = wasmtime::CacheConfig::new();
+                            cache_config.with_directory(cache_path);
+                            wasmtime::Cache::new(cache_config)
+                        }
+                    ).map_or_else(
+                        |e| {
+                            log::warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
+                            None
+                        },
+                        Some,
+                    );
+                    config.cache(cache);
                 }
             }
         }
