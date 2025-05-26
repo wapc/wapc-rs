@@ -4,6 +4,12 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    groups:
+      wasmtime-crates:
+        patterns:
+          - wasmtime-wasi
+          - wasi-common
+          - wasmtime
 
   - package-ecosystem: "github-actions"
     directory: "/"
