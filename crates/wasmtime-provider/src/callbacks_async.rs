@@ -292,7 +292,12 @@ fn get_caller_memory<T>(caller: &mut Caller<T>) -> anyhow::Result<Memory> {
     .ok_or_else(|| anyhow!("'mem' export cannot be converted into a Memory instance"))
 }
 
-fn get_vec_from_memory<'a, T: 'a>(store: impl Into<StoreContext<'a, T>>, mem: Memory, ptr: i32, len: i32) -> Vec<u8> {
+fn get_vec_from_memory<'a, T: 'static>(
+  store: impl Into<StoreContext<'a, T>>,
+  mem: Memory,
+  ptr: i32,
+  len: i32,
+) -> Vec<u8> {
   let data = mem.data(store);
   data[ptr as usize..(ptr + len) as usize].to_vec()
 }
