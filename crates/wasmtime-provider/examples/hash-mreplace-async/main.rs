@@ -60,31 +60,31 @@ pub async fn main() -> Result<(), wapc::errors::Error> {
 
   let host = WapcHostAsync::new(Box::new(engine), Some(callback)).await?;
 
-  println!("Calling guest (wasm) function: {}", WAPC_FUNCTION_NAME);
+  println!("Calling guest (wasm) function: {WAPC_FUNCTION_NAME}");
   // supply person struct
   let person = PersonSend {
     first_name: name.clone(),
   };
   let serbytes: Vec<u8> = serialize(&person).unwrap(); // serialize
   let encoded = hex::encode(serbytes.clone()); // examine
-  println!("serialized message: {}", encoded);
-  println!("calling wasm guest function to process text [{}]", name);
+  println!("serialized message: {encoded}");
+  println!("calling wasm guest function to process text [{name}]");
   println!("---------------CALLING MAIN MODULE------------------");
   let res = host.call(WAPC_FUNCTION_NAME, &serbytes).await?;
   let recv_struct: PersonHashedRecv = deserialize(&res).unwrap();
-  println!("Deserialized : {:?}", recv_struct);
+  println!("Deserialized : {recv_struct:?}");
 
   println!("---------------REPLACING MODULE------------------");
   host.replace_module(&module_bytes2).await.unwrap(); // hotswapping
 
   let serbytes2: Vec<u8> = serialize(&person).unwrap();
   let encoded2 = hex::encode(serbytes2.clone());
-  println!("serialized message: {}", encoded2);
-  println!("calling wasm guest function to process text [{}]", name);
-  println!("Calling guest (wasm) function: {}", WAPC_FUNCTION_NAME);
+  println!("serialized message: {encoded2}");
+  println!("calling wasm guest function to process text [{name}]");
+  println!("Calling guest (wasm) function: {WAPC_FUNCTION_NAME}");
   let res2 = host.call(WAPC_FUNCTION_NAME, &serbytes2).await?; //calling
   let recv_struct2: PersonHashedRecv = deserialize(&res2).unwrap();
-  println!("Deserialized : {:?}", recv_struct2);
+  println!("Deserialized : {recv_struct2:?}");
 
   assert_ne!(recv_struct, recv_struct2);
 

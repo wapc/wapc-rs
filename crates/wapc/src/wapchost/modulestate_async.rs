@@ -87,7 +87,7 @@ impl ModuleStateAsync {
         1
       }
       Err(e) => {
-        *self.host_error.write().await = Some(format!("{}", e));
+        *self.host_error.write().await = Some(format!("{e}"));
         0
       }
     })

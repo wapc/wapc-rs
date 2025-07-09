@@ -384,8 +384,8 @@ mod tests {
         op_length: i32,
         msg_length: i32,
       ) -> std::result::Result<i32, Box<dyn std::error::Error + Send + Sync>> {
-        println!("op len:{}", op_length);
-        println!("msg len:{}", msg_length);
+        println!("op len:{op_length}");
+        println!("msg len:{msg_length}");
         std::thread::sleep(Duration::from_millis(100));
         let host = self.host.take().unwrap();
         host.set_guest_response(b"{}".to_vec());

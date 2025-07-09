@@ -23,7 +23,7 @@ pub fn main() -> Result<(), wapc::errors::Error> {
 
   let host = WapcHost::new(Box::new(engine), Some(Box::new(host_callback)))?;
 
-  println!("Calling guest (wasm) function '{}'", func);
+  println!("Calling guest (wasm) function '{func}'");
   let res = host.call(func, payload.to_owned().as_bytes())?;
   println!("Result - {}", ::std::str::from_utf8(&res).unwrap());
   println!("Elapsed - {}ms", n.elapsed().as_millis());
