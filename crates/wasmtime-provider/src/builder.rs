@@ -164,7 +164,7 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
                         }
                     ).map_or_else(
                         |e| {
-                            log::warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
+                            log::warn!("Wasmtime cache configuration not found ({e}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.");
                             None
                         },
                         Some,
@@ -263,7 +263,7 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
                         }
                     ).map_or_else(
                         |e| {
-                            log::warn!("Wasmtime cache configuration not found ({}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.",e);
+                            log::warn!("Wasmtime cache configuration not found ({e}). Repeated loads will speed up significantly with a cache configuration. See https://docs.wasmtime.dev/cli-cache.html for more information.");
                             None
                         },
                         Some,

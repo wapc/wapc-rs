@@ -49,8 +49,7 @@ async fn benchmark() -> Result<(), errors::Error> {
 
   let now = Instant::now();
   let result =
-    try_join_all((0..num_calls).map(|num| pool.call("echo", serialize(format!("hello world: {}", num)).unwrap())))
-      .await;
+    try_join_all((0..num_calls).map(|num| pool.call("echo", serialize(format!("hello world: {num}")).unwrap()))).await;
   let duration_all = now.elapsed();
 
   println!(
@@ -69,7 +68,7 @@ async fn benchmark() -> Result<(), errors::Error> {
   // Assert correct ordering
   for (i, bytes) in returns.iter().enumerate() {
     let result: String = deserialize(bytes).unwrap();
-    assert_eq!(result, format!("hello world: {}", i));
+    assert_eq!(result, format!("hello world: {i}"));
   }
 
   println!(

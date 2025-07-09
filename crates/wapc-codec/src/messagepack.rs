@@ -72,11 +72,11 @@ mod tests {
       age: 49,
     };
 
-    println!("Original : {:?}", person);
+    println!("Original : {person:?}");
 
     let bytes = serialize(&person).unwrap();
 
-    println!("Serialized messagepack bytes: {:?}", bytes);
+    println!("Serialized messagepack bytes: {bytes:?}");
 
     let round_trip: Person = deserialize(&bytes).unwrap();
 

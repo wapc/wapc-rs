@@ -55,7 +55,7 @@ impl HostPool {
     N: AsRef<str>,
     F: Fn() -> WapcHost + Send + Sync + 'static,
   {
-    debug!("Creating new wapc host pool with size {}", max_threads);
+    debug!("Creating new wapc host pool with size {max_threads}");
     let arcfn = Arc::new(factory);
     let pool = rusty_pool::Builder::new()
       .name(name.as_ref().to_owned())
@@ -99,7 +99,7 @@ impl HostPool {
         let factory = self.factory.clone();
         let rx = self.rx.clone();
         pool.execute(move || {
-          trace!("Host thread {}.{} started...", name, i);
+          trace!("Host thread {name}.{i} started...");
           let host = factory();
           loop {
             let message = max_idle.map_or_else(
@@ -107,24 +107,21 @@ impl HostPool {
               |duration| rx.recv_timeout(duration).map_err(|e| e.to_string()),
             );
             if let Err(e) = message {
-              debug!("Host thread {}.{} closing: {}", name, i, e);
+              debug!("Host thread {name}.{i} closing: {e}");
               break;
             }
             let (tx, op, payload) = message.unwrap();
             trace!(
-              "Host thread {}.{} received call for {} with {} byte payload",
-              name,
-              i,
-              op,
+              "Host thread {name}.{i} received call for {op} with {} byte payload",
               payload.len()
             );
             let result = host.call(&op, &payload);
             if tx.send(result).is_err() {
-              error!("Host thread {}.{} failed when returning a value...", name, i);
+              error!("Host thread {name}.{i} failed when returning a value...");
             }
           }
 
-          trace!("Host thread {}.{} stopped.", name, i);
+          trace!("Host thread {name}.{i} stopped.");
         });
         Ok(())
       },
@@ -384,8 +381,8 @@ mod tests {
         op_length: i32,
         msg_length: i32,
       ) -> std::result::Result<i32, Box<dyn std::error::Error + Send + Sync>> {
-        println!("op len:{}", op_length);
-        println!("msg len:{}", msg_length);
+        println!("op len:{op_length}");
+        println!("msg len:{msg_length}");
         std::thread::sleep(Duration::from_millis(100));
         let host = self.host.take().unwrap();
         host.set_guest_response(b"{}".to_vec());

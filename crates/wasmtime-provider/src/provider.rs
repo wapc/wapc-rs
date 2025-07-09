@@ -8,10 +8,9 @@ use wapc::WasiParams;
 use wapc::{wapc_functions, ModuleState, WebAssemblyEngineProvider};
 use wasmtime::{AsContextMut, Engine, Instance, InstancePre, Linker, Module, Store, TypedFunc};
 
-use crate::callbacks;
 use crate::errors::{Error, Result};
 use crate::store::WapcStore;
-use crate::EpochDeadlines;
+use crate::{callbacks, EpochDeadlines};
 
 struct EngineInner {
   instance: Arc<RwLock<Instance>>,
@@ -210,7 +209,7 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
     match call {
       Ok(result) => Ok(result),
       Err(err) => {
-        error!("Failure invoking guest module handler: {:?}", err);
+        error!("Failure invoking guest module handler: {err:?}");
         let mut guest_error = err.to_string();
         if let Some(trap) = err.downcast_ref::<wasmtime::Trap>() {
           if matches!(trap, wasmtime::Trap::Interrupt) {

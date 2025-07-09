@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
 
   let result: String = deserialize(&bytes)?;
 
-  println!("Wasm module returned: {}", result);
+  println!("Wasm module returned: {result}");
 
   Ok(())
 }

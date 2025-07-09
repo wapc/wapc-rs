@@ -85,7 +85,7 @@ impl ModuleState {
         1
       }
       Err(e) => {
-        *self.host_error.write() = Some(format!("{}", e));
+        *self.host_error.write() = Some(format!("{e}"));
         0
       }
     })

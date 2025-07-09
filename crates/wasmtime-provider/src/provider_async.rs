@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
-use log::{error, info};
-
 use async_trait::async_trait;
+use log::{error, info};
 use parking_lot::RwLock;
 use tracing::trace;
 #[cfg(feature = "wasi")]
@@ -10,10 +9,9 @@ use wapc::WasiParams;
 use wapc::{wapc_functions, ModuleStateAsync, WebAssemblyEngineProviderAsync};
 use wasmtime::{AsContextMut, Engine, Instance, InstancePre, Linker, Module, Store, TypedFunc};
 
-use crate::callbacks_async;
 use crate::errors::{Error, Result};
 use crate::store_async::WapcStoreAsync;
-use crate::EpochDeadlines;
+use crate::{callbacks_async, EpochDeadlines};
 
 struct EngineInner {
   instance: Arc<RwLock<Instance>>,
@@ -270,7 +268,7 @@ impl WebAssemblyEngineProviderAsync for WasmtimeEngineProviderAsync {
     match call {
       Ok(result) => Ok(result),
       Err(err) => {
-        error!("Failure invoking guest module handler: {:?}", err);
+        error!("Failure invoking guest module handler: {err:?}");
         let mut guest_error = err.to_string();
         if let Some(trap) = err.downcast_ref::<wasmtime::Trap>() {
           if matches!(trap, wasmtime::Trap::Interrupt) {

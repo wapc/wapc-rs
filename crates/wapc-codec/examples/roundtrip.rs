@@ -15,15 +15,15 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     age: 49,
   };
 
-  println!("Original : {:?}", person);
+  println!("Original : {person:?}");
 
   let bytes = serialize(&person)?;
 
-  println!("Serialized messagepack bytes: {:?}", bytes);
+  println!("Serialized messagepack bytes: {bytes:?}");
 
   let round_trip: Person = deserialize(&bytes)?;
 
-  println!("Deserialized : {:?}", round_trip);
+  println!("Deserialized : {round_trip:?}");
 
   Ok(())
 }
