@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v4.1.6
 
       - name: Install Updatecli in the runner
         uses: updatecli/updatecli-action@2289ae9c945707079a248f5e4f5743a6592429ef # v2.90.0
