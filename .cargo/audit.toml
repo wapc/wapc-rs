@@ -1,2 +1,4 @@
 [advisories]
-ignore = []
+ignore = [
+  "RUSTSEC-2024-0436", # transitive dependency `paste` is no longer maintained. We have to wait for https://github.com/3Hren/msgpack-rust/issues/365 to be resolved
+]
