@@ -104,7 +104,6 @@ pub mod errors;
 
 mod builder;
 pub use builder::WasmtimeEngineProviderBuilder;
-
 // export wasmtime and wasmtime_wasi, so that consumers of this crate can use
 // the very same version
 pub use wasmtime;
@@ -119,11 +118,16 @@ pub use wasmtime_wasi;
 /// * waPC initialization code: this is the code defined by the module inside
 ///   of the `wapc_init` or the `_start` functions
 /// * user function: the actual waPC guest function written by an user
+///
+/// Both these limits are expressed using the number of ticks that are allowed before the
+/// WebAssembly execution is interrupted.
+/// It's up to the embedder of waPC to define how much time a single tick is granted. This could
+/// be 1 second, 10 nanoseconds, or whatever the user prefers.
 #[derive(Clone, Copy, Debug)]
-struct EpochDeadlines {
+pub struct EpochDeadlines {
   /// Deadline for waPC initialization code. Expressed in number of epoch ticks
-  wapc_init: u64,
+  pub wapc_init: u64,
 
   /// Deadline for user-defined waPC function computation. Expressed in number of epoch ticks
-  wapc_func: u64,
+  pub wapc_func: u64,
 }
