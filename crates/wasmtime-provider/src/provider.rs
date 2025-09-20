@@ -32,17 +32,11 @@ pub struct WasmtimeEngineProviderPre {
   engine: Engine,
   linker: Linker<WapcStore>,
   instance_pre: InstancePre<WapcStore>,
-  epoch_deadlines: Option<EpochDeadlines>,
 }
 
 impl WasmtimeEngineProviderPre {
   #[cfg(feature = "wasi")]
-  pub(crate) fn new(
-    engine: Engine,
-    module: Module,
-    wasi: Option<WasiParams>,
-    epoch_deadlines: Option<EpochDeadlines>,
-  ) -> Result<Self> {
+  pub(crate) fn new(engine: Engine, module: Module, wasi: Option<WasiParams>) -> Result<Self> {
     let mut linker: Linker<WapcStore> = Linker::new(&engine);
 
     let wasi_params = wasi.unwrap_or_default();
@@ -59,12 +53,11 @@ impl WasmtimeEngineProviderPre {
       engine,
       linker,
       instance_pre,
-      epoch_deadlines,
     })
   }
 
   #[cfg(not(feature = "wasi"))]
-  pub(crate) fn new(engine: Engine, module: Module, epoch_deadlines: Option<EpochDeadlines>) -> Result<Self> {
+  pub(crate) fn new(engine: Engine, module: Module) -> Result<Self> {
     let mut linker: Linker<WapcStore> = Linker::new(&engine);
 
     // register all the waPC host functions
@@ -77,7 +70,6 @@ impl WasmtimeEngineProviderPre {
       engine,
       linker,
       instance_pre,
-      epoch_deadlines,
     })
   }
 
@@ -85,7 +77,7 @@ impl WasmtimeEngineProviderPre {
   ///
   /// Note: from micro-benchmarking, this method is 10 microseconds faster than
   /// `WasmtimeEngineProvider::clone`.
-  pub fn rehydrate(&self) -> Result<WasmtimeEngineProvider> {
+  pub fn rehydrate(&self, epoch_deadlines: Option<EpochDeadlines>) -> Result<WasmtimeEngineProvider> {
     let engine = self.engine.clone();
 
     #[cfg(feature = "wasi")]
@@ -99,7 +91,7 @@ impl WasmtimeEngineProviderPre {
       module: self.module.clone(),
       inner: None,
       engine,
-      epoch_deadlines: self.epoch_deadlines,
+      epoch_deadlines,
       linker: self.linker.clone(),
       instance_pre: self.instance_pre.clone(),
       store,

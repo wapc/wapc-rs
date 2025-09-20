@@ -2,7 +2,6 @@ use std::fs::read;
 
 use wapc::errors::Error;
 use wapc::WapcHost;
-
 #[cfg(feature = "async")]
 use wapc::WapcHostAsync;
 
@@ -270,10 +269,15 @@ fn runs_wapc_timeout() -> Result<(), Error> {
   engine_conf.epoch_interruption(true);
   let engine = wasmtime::Engine::new(&engine_conf).expect("cannot create wasmtime engine");
 
+  let epoch_deadlines = wasmtime_provider::EpochDeadlines {
+    wapc_init: wapc_init_deadline,
+    wapc_func: wapc_func_deadline,
+  };
+
   let wapc_engine_builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
     .module_bytes(&module_bytes)
     .engine(engine.clone())
-    .enable_epoch_interruptions(wapc_init_deadline, wapc_func_deadline);
+    .enable_epoch_interruptions(epoch_deadlines);
   let guest = create_guest_from_builder(&wapc_engine_builder)?;
 
   std::thread::spawn(move || {
@@ -311,10 +315,15 @@ async fn runs_wapc_timeout_async() -> Result<(), Error> {
   engine_conf.async_support(true);
   let engine = wasmtime::Engine::new(&engine_conf).expect("cannot create wasmtime engine");
 
+  let epoch_deadlines = wasmtime_provider::EpochDeadlines {
+    wapc_init: wapc_init_deadline,
+    wapc_func: wapc_func_deadline,
+  };
+
   let wapc_engine_builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
     .module_bytes(&module_bytes)
     .engine(engine.clone())
-    .enable_epoch_interruptions(wapc_init_deadline, wapc_func_deadline);
+    .enable_epoch_interruptions(epoch_deadlines);
   let guest = create_guest_async_from_builder(&wapc_engine_builder, host_callback_basic_async).await?;
 
   tokio::spawn(async move {
