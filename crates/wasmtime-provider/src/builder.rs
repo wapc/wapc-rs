@@ -1,5 +1,5 @@
 use crate::errors::{Error, Result};
-use crate::{WasmtimeEngineProvider, WasmtimeEngineProviderPre};
+use crate::{EpochDeadlines, WasmtimeEngineProvider, WasmtimeEngineProviderPre};
 #[cfg(feature = "async")]
 use crate::{WasmtimeEngineProviderAsync, WasmtimeEngineProviderAsyncPre};
 
@@ -16,7 +16,7 @@ pub struct WasmtimeEngineProviderBuilder<'a> {
   cache_path: Option<std::path::PathBuf>,
   #[cfg(feature = "wasi")]
   wasi_params: Option<wapc::WasiParams>,
-  epoch_deadlines: Option<crate::EpochDeadlines>,
+  epoch_deadlines: Option<EpochDeadlines>,
 }
 
 #[allow(deprecated)]
@@ -82,30 +82,14 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
   }
 
   /// Enable Wasmtime [epoch-based interruptions](wasmtime::Config::epoch_interruption) and set
-  /// the deadlines to be enforced
-  ///
-  /// Two kind of deadlines have to be set:
-  ///
-  /// * `wapc_init_deadline`: the number of ticks the waPC initialization code can take before the
-  ///   code is interrupted. This is the code usually defined inside of the `wapc_init`/`_start`
-  ///   functions
-  /// * `wapc_func_deadline`: the number of ticks any regular waPC guest function can run before
-  ///   its terminated by the host
-  ///
-  /// Both these limits are expressed using the number of ticks that are allowed before the
-  /// WebAssembly execution is interrupted.
-  /// It's up to the embedder of waPC to define how much time a single tick is granted. This could
-  /// be 1 second, 10 nanoseconds, or whatever the user prefers.
+  /// the deadlines to be enforced.
   ///
   /// **Warning:** when providing an instance of `wasmtime::Engine` via the
   /// `WasmtimeEngineProvider::engine` helper, ensure the `wasmtime::Engine`
   /// has been created with the `epoch_interruption` feature enabled
   #[must_use]
-  pub fn enable_epoch_interruptions(mut self, wapc_init_deadline: u64, wapc_func_deadline: u64) -> Self {
-    self.epoch_deadlines = Some(crate::EpochDeadlines {
-      wapc_init: wapc_init_deadline,
-      wapc_func: wapc_func_deadline,
-    });
+  pub fn enable_epoch_interruptions(mut self, epoch_deadlines: EpochDeadlines) -> Self {
+    self.epoch_deadlines = Some(epoch_deadlines);
     self
   }
 
@@ -139,9 +123,9 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
         // See https://docs.rs/wasmtime/latest/wasmtime/struct.Engine.html#engines-and-clone
         cfg_if::cfg_if! {
             if #[cfg(feature = "wasi")] {
-                WasmtimeEngineProviderPre::new(e.clone(), module, self.wasi_params.clone(), self.epoch_deadlines)
+                WasmtimeEngineProviderPre::new(e.clone(), module, self.wasi_params.clone())
             } else {
-                WasmtimeEngineProviderPre::new(e.clone(), module, self.epoch_deadlines)
+                WasmtimeEngineProviderPre::new(e.clone(), module)
             }
         }
       }
@@ -183,9 +167,9 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
 
         cfg_if::cfg_if! {
             if #[cfg(feature = "wasi")] {
-                WasmtimeEngineProviderPre::new(engine, module, self.wasi_params.clone(), self.epoch_deadlines)
+                WasmtimeEngineProviderPre::new(engine, module, self.wasi_params.clone())
             } else {
-                WasmtimeEngineProviderPre::new(engine, module, self.epoch_deadlines)
+                WasmtimeEngineProviderPre::new(engine, module)
 
             }
         }
@@ -198,7 +182,7 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
   /// Create a `WasmtimeEngineProvider` instance
   pub fn build(&self) -> Result<WasmtimeEngineProvider> {
     let pre = self.build_pre()?;
-    pre.rehydrate()
+    pre.rehydrate(self.epoch_deadlines)
   }
 
   /// Create a [`WasmtimeEngineProviderAsyncPre`] instance. This instance can then
