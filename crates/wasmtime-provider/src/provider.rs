@@ -169,7 +169,7 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
   fn init(
     &mut self,
     host: Arc<ModuleState>,
-  ) -> std::result::Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+  ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     // create the proper store, now we have a value for `host`
     #[cfg(feature = "wasi")]
     let wapc_store = WapcStore::new(&self.wasi_params, Some(host.clone()))?;
@@ -195,7 +195,7 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
     &mut self,
     op_length: i32,
     msg_length: i32,
-  ) -> std::result::Result<i32, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+  ) -> std::result::Result<i32, Box<dyn std::error::Error + Send + Sync + 'static>> {
     if let Some(deadlines) = &self.epoch_deadlines {
       // the deadline counter must be set before invoking the wasm function
       self.store.set_epoch_deadline(deadlines.wapc_func);
@@ -222,10 +222,7 @@ impl WebAssemblyEngineProvider for WasmtimeEngineProvider {
     }
   }
 
-  fn replace(
-    &mut self,
-    module: &[u8],
-  ) -> std::result::Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+  fn replace(&mut self, module: &[u8]) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     info!(
       "HOT SWAP - Replacing existing WebAssembly module with new buffer, {} bytes",
       module.len()

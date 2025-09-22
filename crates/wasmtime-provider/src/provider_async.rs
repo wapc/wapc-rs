@@ -281,7 +281,7 @@ impl WebAssemblyEngineProviderAsync for WasmtimeEngineProviderAsync {
     }
   }
 
-  async fn replace(&mut self, module: &[u8]) -> std::result::Result<(), Box<(dyn std::error::Error + Send + Sync)>> {
+  async fn replace(&mut self, module: &[u8]) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!(
       "HOT SWAP - Replacing existing WebAssembly module with new buffer, {} bytes",
       module.len()
