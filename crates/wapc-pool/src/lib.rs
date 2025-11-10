@@ -26,7 +26,6 @@
   clippy::str_to_string,
   clippy::inherent_to_string,
   clippy::let_and_return,
-  clippy::string_to_string,
   clippy::try_err,
   clippy::unused_async,
   clippy::missing_enforced_import_renames,
