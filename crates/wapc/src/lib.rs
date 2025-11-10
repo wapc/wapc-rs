@@ -27,7 +27,6 @@
   clippy::str_to_string,
   clippy::inherent_to_string,
   clippy::let_and_return,
-  clippy::string_to_string,
   clippy::try_err,
   clippy::unused_async,
   clippy::missing_enforced_import_renames,
@@ -88,25 +87,22 @@ mod wasi;
 
 #[cfg(feature = "async")]
 use core::future::Future;
-
 use std::error::Error;
 
 // sync exports
 pub use wapchost::modulestate::ModuleState;
-pub use wapchost::traits::{ModuleHost, WebAssemblyEngineProvider};
-pub use wapchost::WapcHost;
-
 // async exports
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 pub use wapchost::modulestate_async::ModuleStateAsync;
+pub use wapchost::traits::{ModuleHost, WebAssemblyEngineProvider};
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 pub use wapchost::traits::{ModuleHostAsync, WebAssemblyEngineProviderAsync};
+pub use wapchost::WapcHost;
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 pub use wapchost::WapcHostAsync;
-
 pub use wasi::WasiParams;
 
 /// The host module name / namespace that guest modules must use for imports
