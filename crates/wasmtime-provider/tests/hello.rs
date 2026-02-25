@@ -312,7 +312,6 @@ async fn runs_wapc_timeout_async() -> Result<(), Error> {
 
   let mut engine_conf = wasmtime::Config::default();
   engine_conf.epoch_interruption(true);
-  engine_conf.async_support(true);
   let engine = wasmtime::Engine::new(&engine_conf).expect("cannot create wasmtime engine");
 
   let epoch_deadlines = wasmtime_provider::EpochDeadlines {
