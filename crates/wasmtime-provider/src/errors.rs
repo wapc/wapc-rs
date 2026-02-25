@@ -41,8 +41,11 @@ pub enum Error {
   #[error("Invalid WasmtimeEngineProviderBuilder configuration: {0}")]
   BuilderInvalidConfig(String),
 
+  /// Error raised by wasmtime
+  #[error(transparent)]
+  Wasmtime(#[from] wasmtime::Error),
+
   /// Generic error
-  // wasmtime uses `anyhow::Error` inside of its public API
   #[error(transparent)]
   Generic(#[from] anyhow::Error),
 }
