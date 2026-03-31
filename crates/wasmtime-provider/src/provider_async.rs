@@ -31,7 +31,7 @@ pub struct WasmtimeEngineProviderAsyncPre {
   #[cfg(feature = "wasi")]
   wasi_params: WasiParams,
   engine: Engine,
-  linker: Linker<WapcStoreAsync>,
+  linker: Arc<Linker<WapcStoreAsync>>,
   instance_pre: InstancePre<WapcStoreAsync>,
   epoch_deadlines: Option<EpochDeadlines>,
 }
@@ -58,7 +58,7 @@ impl WasmtimeEngineProviderAsyncPre {
       module,
       wasi_params,
       engine,
-      linker,
+      linker: Arc::new(linker),
       instance_pre,
       epoch_deadlines,
     })
@@ -76,7 +76,7 @@ impl WasmtimeEngineProviderAsyncPre {
     Ok(Self {
       module,
       engine,
-      linker,
+      linker: Arc::new(linker),
       instance_pre,
       epoch_deadlines,
     })
@@ -101,7 +101,7 @@ impl WasmtimeEngineProviderAsyncPre {
       inner: None,
       engine,
       epoch_deadlines: self.epoch_deadlines,
-      linker: self.linker.clone(),
+      linker: Arc::clone(&self.linker),
       instance_pre: self.instance_pre.clone(),
       store,
       #[cfg(feature = "wasi")]
@@ -170,7 +170,7 @@ pub struct WasmtimeEngineProviderAsync {
   wasi_params: WasiParams,
   inner: Option<EngineInner>,
   engine: Engine,
-  linker: Linker<WapcStoreAsync>,
+  linker: Arc<Linker<WapcStoreAsync>>,
   store: Store<WapcStoreAsync>,
   instance_pre: InstancePre<WapcStoreAsync>,
   epoch_deadlines: Option<EpochDeadlines>,
@@ -194,7 +194,7 @@ impl Clone for WasmtimeEngineProviderAsync {
           inner: None,
           engine,
           epoch_deadlines: self.epoch_deadlines,
-          linker: self.linker.clone(),
+          linker: Arc::clone(&self.linker),
           instance_pre: self.instance_pre.clone(),
           store,
           #[cfg(feature = "wasi")]
@@ -212,7 +212,7 @@ impl Clone for WasmtimeEngineProviderAsync {
         inner: None,
         engine,
         epoch_deadlines: self.epoch_deadlines,
-        linker: self.linker.clone(),
+        linker: Arc::clone(&self.linker),
         instance_pre: self.instance_pre.clone(),
         store,
         #[cfg(feature = "wasi")]
