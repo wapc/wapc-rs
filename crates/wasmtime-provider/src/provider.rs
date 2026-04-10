@@ -30,19 +30,7 @@ pub struct WasmtimeEngineProviderPre {
   #[cfg(feature = "wasi")]
   wasi_params: WasiParams,
   engine: Engine,
-  // NOTE: The `Linker` is wrapped in `Arc` to work around a bug in wasmtime 43
-  // where `StringPool::try_clone()` produces a clone whose internal `map` still
-  // holds `&'static str` pointers into the *original* pool's `strings` storage.
-  // Once the original `WasmtimeEngineProviderPre` is dropped (at the end of
-  // `build()`), those pointers dangle and any subsequent linker lookup (e.g.
-  // inside `replace()`) triggers undefined behaviour that surfaces as
-  // "unknown import: `wapc::__host_call` has not been defined".
-  //
-  // By sharing the linker via `Arc` instead of cloning it, we guarantee that the
-  // `StringPool::strings` backing the pool's map is kept alive as long as any
-  // `WasmtimeEngineProvider` (or `WasmtimeEngineProviderPre`) that was derived
-  // from it still exists.
-  linker: Arc<Linker<WapcStore>>,
+  linker: Linker<WapcStore>,
   instance_pre: InstancePre<WapcStore>,
 }
 
@@ -63,7 +51,7 @@ impl WasmtimeEngineProviderPre {
       module,
       wasi_params,
       engine,
-      linker: Arc::new(linker),
+      linker,
       instance_pre,
     })
   }
@@ -80,7 +68,7 @@ impl WasmtimeEngineProviderPre {
     Ok(Self {
       module,
       engine,
-      linker: Arc::new(linker),
+      linker,
       instance_pre,
     })
   }
@@ -104,7 +92,7 @@ impl WasmtimeEngineProviderPre {
       inner: None,
       engine,
       epoch_deadlines,
-      linker: Arc::clone(&self.linker),
+      linker: self.linker.clone(),
       instance_pre: self.instance_pre.clone(),
       store,
       #[cfg(feature = "wasi")]
@@ -121,7 +109,7 @@ pub struct WasmtimeEngineProvider {
   wasi_params: WasiParams,
   inner: Option<EngineInner>,
   engine: Engine,
-  linker: Arc<Linker<WapcStore>>,
+  linker: Linker<WapcStore>,
   store: Store<WapcStore>,
   instance_pre: InstancePre<WapcStore>,
   epoch_deadlines: Option<EpochDeadlines>,
@@ -145,7 +133,7 @@ impl Clone for WasmtimeEngineProvider {
           inner: None,
           engine,
           epoch_deadlines: self.epoch_deadlines,
-          linker: Arc::clone(&self.linker),
+          linker: self.linker.clone(),
           instance_pre: self.instance_pre.clone(),
           store,
           #[cfg(feature = "wasi")]
@@ -159,7 +147,7 @@ impl Clone for WasmtimeEngineProvider {
         inner: None,
         engine,
         epoch_deadlines: self.epoch_deadlines,
-        linker: Arc::clone(&self.linker),
+        linker: self.linker.clone(),
         instance_pre: self.instance_pre.clone(),
         store,
         #[cfg(feature = "wasi")]
