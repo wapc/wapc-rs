@@ -81,7 +81,7 @@
 pub mod errors;
 mod protocol;
 
-pub use protocol::{CallResult, HandlerResult, __guest_call, console_log, host_call, register_function};
+pub use protocol::{__guest_call, console_log, host_call, register_function, CallResult, HandlerResult};
 #[cfg(feature = "codec")]
 pub use wapc_codec as codec;
 
