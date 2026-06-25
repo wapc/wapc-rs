@@ -1,4 +1,5 @@
 [advisories]
 ignore = [
   "RUSTSEC-2024-0436", # transitive dependency `paste` is no longer maintained. We have to wait for https://github.com/3Hren/msgpack-rust/issues/365 to be resolved
+  "RUSTSEC-2026-0173", # transitive dependency `proc-macro-error2` is no longer maintained. We have to wait for wasmtime to get rid of it
 ]
