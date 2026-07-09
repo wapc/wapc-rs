@@ -1,10 +1,9 @@
 use std::fs::read;
 
-use wapc::{errors, WapcHost};
-use wapc_codec::messagepack::{deserialize, serialize};
-
 #[cfg(feature = "async")]
 use wapc::WapcHostAsync;
+use wapc::{errors, WapcHost};
+use wapc_codec::messagepack::{deserialize, serialize};
 
 #[test]
 fn runs_wapc_guest() -> Result<(), errors::Error> {

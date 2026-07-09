@@ -1,12 +1,10 @@
-use std::{
-  cell::RefCell,
-  sync::{atomic::Ordering, Arc},
-};
+use std::cell::RefCell;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
-use crate::wapchost::{
-  errors, modulestate::ModuleState, traits::WebAssemblyEngineProvider, HostCallback, Invocation, Result,
-  GLOBAL_MODULE_COUNT,
-};
+use crate::wapchost::modulestate::ModuleState;
+use crate::wapchost::traits::WebAssemblyEngineProvider;
+use crate::wapchost::{errors, HostCallback, Invocation, Result, GLOBAL_MODULE_COUNT};
 
 /// A WebAssembly host runtime for waPC-compliant modules
 ///

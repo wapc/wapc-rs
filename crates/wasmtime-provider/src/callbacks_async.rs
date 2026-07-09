@@ -131,11 +131,14 @@ fn register_host_response_func(linker: &mut Linker<WapcStoreAsync>) -> Result<()
           let host = caller
             .data()
             .host
-            .as_ref()
+            .clone()
             .ok_or_else(|| format_err!("host should have been set during the init"))?;
 
-          if let Some(ref e) = host.get_host_response().await {
-            write_bytes_to_memory(caller.as_context_mut(), memory, ptr, e)?;
+          let write_result = host
+            .with_host_response(|bytes| write_bytes_to_memory(caller.as_context_mut(), memory, ptr, bytes))
+            .await;
+          if let Some(result) = write_result {
+            result?;
           }
           Ok(())
         })
@@ -161,7 +164,7 @@ fn register_host_response_len_func(linker: &mut Linker<WapcStoreAsync>) -> Resul
             .as_ref()
             .ok_or_else(|| format_err!("host should have been set during the init"))?;
 
-          let len = host.get_host_response().await.map_or_else(|| 0, |r| r.len()) as i32;
+          let len = host.host_response_len().await as i32;
           Ok(len)
         })
       },

@@ -36,13 +36,13 @@ pub(crate) fn guest_request(ctx: &CallContext, op_ptr: i32, ptr: i32, host: &Arc
 }
 
 pub(crate) fn host_response(ctx: &CallContext, ptr: i32, host: &Arc<ModuleState>) {
-  if let Some(ref r) = host.get_host_response() {
-    write_bytes_to_memory(ctx, ptr, r);
-  }
+  host.with_host_response(|bytes| {
+    write_bytes_to_memory(ctx, ptr, bytes);
+  });
 }
 
 pub(crate) fn host_response_length(_ctx: &CallContext, host: &Arc<ModuleState>) -> i32 {
-  host.get_host_response().unwrap_or_default().len() as i32
+  host.host_response_len() as i32
 }
 
 pub(crate) fn console_log(ctx: &CallContext, ptr: i32, len: i32, host: &Arc<ModuleState>) {

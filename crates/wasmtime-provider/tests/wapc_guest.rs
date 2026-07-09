@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
-
-use wapc::{errors, WapcHost};
-use wapc_codec::messagepack::{deserialize, serialize};
-
 #[cfg(feature = "async")]
 use wapc::WapcHostAsync;
+use wapc::{errors, WapcHost};
+use wapc_codec::messagepack::{deserialize, serialize};
 
 const WAPC_FUNCTION_NAME: &str = "serdes_example";
 

@@ -17,6 +17,5 @@ pub(crate) static GLOBAL_MODULE_COUNT: AtomicU64 = AtomicU64::new(1);
 pub(crate) type Result<T> = std::result::Result<T, errors::Error>;
 
 pub use host::WapcHost;
-
 #[cfg(feature = "async")]
 pub use host_async::WapcHostAsync;
