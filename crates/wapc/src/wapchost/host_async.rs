@@ -1,14 +1,12 @@
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::{
-  wapchost::{
-    errors, modulestate_async::ModuleStateAsync, traits::WebAssemblyEngineProviderAsync, Invocation, Result,
-    GLOBAL_MODULE_COUNT,
-  },
-  HostCallbackAsync,
-};
+use crate::wapchost::modulestate_async::ModuleStateAsync;
+use crate::wapchost::traits::WebAssemblyEngineProviderAsync;
+use crate::wapchost::{errors, Invocation, Result, GLOBAL_MODULE_COUNT};
+use crate::HostCallbackAsync;
 
 /// A WebAssembly host runtime for waPC-compliant modules that can be used in async contexts
 ///

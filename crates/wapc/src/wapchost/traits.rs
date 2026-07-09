@@ -1,12 +1,13 @@
-use std::{error::Error, sync::Arc};
+use std::error::Error;
+use std::sync::Arc;
 
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 
+use crate::wapchost::modulestate::ModuleState;
 #[cfg(feature = "async")]
 use crate::wapchost::modulestate_async::ModuleStateAsync;
-
-use crate::{wapchost::modulestate::ModuleState, Invocation};
+use crate::Invocation;
 
 /// The module host (waPC) must provide an implementation of this trait to the engine provider
 /// to enable waPC function calls.
