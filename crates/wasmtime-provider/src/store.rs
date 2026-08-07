@@ -4,7 +4,7 @@ use wapc::ModuleState;
 
 pub(crate) struct WapcStore {
   #[cfg(feature = "wasi")]
-  pub(crate) wasi_ctx: wasi_common::WasiCtx,
+  pub(crate) wasi_ctx: wasmtime_wasi::p1::WasiP1Ctx,
   pub(crate) host: Option<Arc<ModuleState>>,
 }
 

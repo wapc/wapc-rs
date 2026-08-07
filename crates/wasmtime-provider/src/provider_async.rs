@@ -47,7 +47,10 @@ impl WasmtimeEngineProviderAsyncPre {
     let mut linker: Linker<WapcStoreAsync> = Linker::new(&engine);
 
     let wasi_params = wasi.unwrap_or_default();
-    wasi_common::tokio::add_to_linker(&mut linker, |s: &mut WapcStoreAsync| &mut s.wasi_ctx).unwrap();
+    wasmtime_wasi::p1::add_to_linker_async(&mut linker, |s: &mut WapcStoreAsync| &mut s.wasi_ctx).unwrap();
+    // Also register the older `wasi_unstable` (Preview 0) ABI, used by some
+    // older toolchains (e.g. older TinyGo versions).
+    wasmtime_wasi::p0::add_to_linker_async(&mut linker, |s: &mut WapcStoreAsync| &mut s.wasi_ctx).unwrap();
 
     // register all the waPC host functions
     callbacks_async::add_to_linker(&mut linker)?;
@@ -339,7 +342,7 @@ impl WasmtimeEngineProviderAsync {
           // error and, if the exit code is 0, we can ignore it. Otherwise the waPC initialization
           // will fail.
           #[cfg(feature = "wasi")]
-          if let Some(exit_err) = err.downcast_ref::<wasi_common::I32Exit>() {
+          if let Some(exit_err) = err.downcast_ref::<wasmtime_wasi::I32Exit>() {
             if exit_err.0 != 0 {
               return Err(Error::InitializationFailed(err.to_string()));
             }
