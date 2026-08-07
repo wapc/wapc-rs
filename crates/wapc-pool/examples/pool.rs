@@ -8,14 +8,14 @@ use wapc_pool::HostPoolBuilder;
 async fn main() -> anyhow::Result<()> {
   let buf = read("./wasm/crates/wapc-guest-test/build/wapc_guest_test.wasm")?;
 
-  let engine = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
+  let engine_pre = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
     .module_bytes(&buf)
-    .build()?;
+    .build_pre()?;
 
   let pool = HostPoolBuilder::new()
     .name("pool example")
     .factory(move || {
-      let engine = engine.clone();
+      let engine = engine_pre.rehydrate(None).unwrap();
       WapcHost::new(Box::new(engine), None).unwrap()
     })
     .max_threads(5)

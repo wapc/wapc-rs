@@ -20,12 +20,12 @@ async fn main() -> anyhow::Result<()> {
 
   let engine = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
     .module_bytes(&file)
-    .build()?;
+    .build_pre()?;
 
   let pool = HostPoolBuilder::new()
     .name("pool example")
     .factory(move || {
-      let engine = engine.clone();
+      let engine = engine.rehydrate(None).unwrap();
       WapcHost::new(Box::new(engine), None).unwrap()
     })
     .max_threads(5)
