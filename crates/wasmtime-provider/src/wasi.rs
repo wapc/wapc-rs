@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::path::{Component, Path};
 
 use wasmtime_wasi::p1::WasiP1Ctx;
-use wasmtime_wasi::{DirPerms, FilePerms, WasiCtxBuilder};
+use wasmtime_wasi::{FsPerms, WasiCtxBuilder};
 
 pub(crate) fn init_ctx(
   preopen_dirs: &[(String, String)],
@@ -17,7 +17,7 @@ pub(crate) fn init_ctx(
   ctx_builder.envs(env);
 
   for (guest, host) in preopen_dirs {
-    ctx_builder.preopened_dir(host, guest, DirPerms::all(), FilePerms::all())?;
+    ctx_builder.preopened_dir(host, guest, FsPerms::ReadWrite)?;
   }
 
   Ok(ctx_builder.build_p1())
