@@ -1,6 +1,6 @@
 [package]
 name = "wasmtime-provider"
-version = "2.23.0"
+version = "2.24.0"
 authors = [
   "Kevin Hoffman <alothien@gmail.com>",
   "Jarrod Overson <jsoverson@gmail.com>",
@@ -29,12 +29,7 @@ status = "actively-developed"
 default = ["wasi", "async"]
 cache = ["wasmtime/cache"]
 wasi = ["wasmtime-wasi"]
-async = [
-  "wapc/async",
-  "wasmtime/async",
-  "async-trait",
-  "tokio",
-]
+async = ["wapc/async", "wasmtime/async", "async-trait", "tokio"]
 
 [dependencies]
 wapc = { path = "../wapc", version = "2.2.0" }
