@@ -130,3 +130,59 @@ pub struct EpochDeadlines {
   /// Deadline for user-defined waPC function computation. Expressed in number of epoch ticks
   pub wapc_func: u64,
 }
+
+/// Configure limits on the resources a single waPC WebAssembly instance is
+/// allowed to consume, leveraging wasmtime's
+/// [`ResourceLimiter`](https://docs.rs/wasmtime/latest/wasmtime/trait.ResourceLimiter.html)
+/// facility (via [`wasmtime::StoreLimits`]).
+///
+/// This can be used to prevent a malicious, or misbehaving, WebAssembly
+/// module from exhausting the host's memory, for example by growing its
+/// linear memory in an unbounded loop.
+///
+/// When a limit is exceeded, the corresponding `memory.grow`/`table.grow`
+/// wasm instruction fails and returns `-1` to the guest, following the
+/// WebAssembly specification. Most language toolchains (Rust, TinyGo,
+/// AssemblyScript, ...) treat a failed growth as a fatal allocation failure
+/// and abort the guest, which is reported back to the host as a trap. The
+/// memory/table cap itself is always enforced by the host regardless of how
+/// the guest reacts to the failed growth.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ResourceLimits {
+  /// Maximum size, in bytes, that each of the module's linear memories is
+  /// allowed to grow to. This limit is applied to each linear memory
+  /// individually.
+  ///
+  /// `None` (the default) means no limit is enforced.
+  pub max_memory_size: Option<usize>,
+
+  /// Maximum number of elements each of the module's tables is allowed to
+  /// grow to. This limit is applied to each table individually.
+  ///
+  /// WebAssembly tables are used to hold indirect function references (e.g.
+  /// Rust trait objects, Go interfaces, C function pointers) and each
+  /// element costs roughly the size of a pointer of host memory. Most
+  /// modules never grow their tables at runtime, so this is a secondary,
+  /// defense-in-depth limit compared to [`ResourceLimits::max_memory_size`].
+  /// A generous value such as `100_000` (~0.8 MB on a 64-bit host) is
+  /// unlikely to affect legitimate modules.
+  ///
+  /// `None` (the default) means no limit is enforced.
+  pub max_table_elements: Option<usize>,
+}
+
+// Builds a `wasmtime::StoreLimits` out of the (optional) `ResourceLimits`
+// configuration. When `None` is provided, the resulting limits are
+// effectively unlimited (i.e. wasmtime's defaults).
+fn store_limits(resource_limits: Option<ResourceLimits>) -> wasmtime::StoreLimits {
+  let mut builder = wasmtime::StoreLimitsBuilder::new();
+  if let Some(limits) = resource_limits {
+    if let Some(max_memory_size) = limits.max_memory_size {
+      builder = builder.memory_size(max_memory_size);
+    }
+    if let Some(max_table_elements) = limits.max_table_elements {
+      builder = builder.table_elements(max_table_elements);
+    }
+  }
+  builder.build()
+}
