@@ -11,7 +11,7 @@ use wasmtime::{AsContextMut, Engine, Instance, InstancePre, Linker, Module, Stor
 
 use crate::errors::{Error, Result};
 use crate::store_async::WapcStoreAsync;
-use crate::{callbacks_async, EpochDeadlines};
+use crate::{callbacks_async, EpochDeadlines, ResourceLimits};
 
 struct EngineInner {
   instance: Arc<RwLock<Instance>>,
@@ -34,6 +34,7 @@ pub struct WasmtimeEngineProviderAsyncPre {
   linker: Linker<WapcStoreAsync>,
   instance_pre: InstancePre<WapcStoreAsync>,
   epoch_deadlines: Option<EpochDeadlines>,
+  resource_limits: Option<ResourceLimits>,
 }
 
 impl WasmtimeEngineProviderAsyncPre {
@@ -43,6 +44,7 @@ impl WasmtimeEngineProviderAsyncPre {
     module: Module,
     wasi: Option<WasiParams>,
     epoch_deadlines: Option<EpochDeadlines>,
+    resource_limits: Option<ResourceLimits>,
   ) -> Result<Self> {
     let mut linker: Linker<WapcStoreAsync> = Linker::new(&engine);
 
@@ -64,11 +66,17 @@ impl WasmtimeEngineProviderAsyncPre {
       linker,
       instance_pre,
       epoch_deadlines,
+      resource_limits,
     })
   }
 
   #[cfg(not(feature = "wasi"))]
-  pub(crate) fn new(engine: Engine, module: Module, epoch_deadlines: Option<EpochDeadlines>) -> Result<Self> {
+  pub(crate) fn new(
+    engine: Engine,
+    module: Module,
+    epoch_deadlines: Option<EpochDeadlines>,
+    resource_limits: Option<ResourceLimits>,
+  ) -> Result<Self> {
     let mut linker: Linker<WapcStoreAsync> = Linker::new(&engine);
 
     // register all the waPC host functions
@@ -82,6 +90,7 @@ impl WasmtimeEngineProviderAsyncPre {
       linker,
       instance_pre,
       epoch_deadlines,
+      resource_limits,
     })
   }
 
@@ -93,11 +102,12 @@ impl WasmtimeEngineProviderAsyncPre {
     let engine = self.engine.clone();
 
     #[cfg(feature = "wasi")]
-    let wapc_store = WapcStoreAsync::new(&self.wasi_params, None)?;
+    let wapc_store = WapcStoreAsync::new(&self.wasi_params, None, self.resource_limits)?;
     #[cfg(not(feature = "wasi"))]
-    let wapc_store = WapcStoreAsync::new(None);
+    let wapc_store = WapcStoreAsync::new(None, self.resource_limits);
 
-    let store = Store::new(&engine, wapc_store);
+    let mut store = Store::new(&engine, wapc_store);
+    store.limiter(|s| &mut s.limits);
 
     Ok(WasmtimeEngineProviderAsync {
       module: self.module.clone(),
@@ -109,6 +119,7 @@ impl WasmtimeEngineProviderAsyncPre {
       store,
       #[cfg(feature = "wasi")]
       wasi_params: self.wasi_params.clone(),
+      resource_limits: self.resource_limits,
     })
   }
 }
@@ -177,6 +188,7 @@ pub struct WasmtimeEngineProviderAsync {
   store: Store<WapcStoreAsync>,
   instance_pre: InstancePre<WapcStoreAsync>,
   epoch_deadlines: Option<EpochDeadlines>,
+  resource_limits: Option<ResourceLimits>,
 }
 
 impl Clone for WasmtimeEngineProviderAsync {
@@ -184,11 +196,12 @@ impl Clone for WasmtimeEngineProviderAsync {
     let engine = self.engine.clone();
 
     #[cfg(feature = "wasi")]
-    let wapc_store = WapcStoreAsync::new(&self.wasi_params, None).unwrap();
+    let wapc_store = WapcStoreAsync::new(&self.wasi_params, None, self.resource_limits).unwrap();
     #[cfg(not(feature = "wasi"))]
-    let wapc_store = WapcStoreAsync::new(None);
+    let wapc_store = WapcStoreAsync::new(None, self.resource_limits);
 
-    let store = Store::new(&engine, wapc_store);
+    let mut store = Store::new(&engine, wapc_store);
+    store.limiter(|s| &mut s.limits);
 
     match &self.inner {
       Some(state) => {
@@ -202,6 +215,7 @@ impl Clone for WasmtimeEngineProviderAsync {
           store,
           #[cfg(feature = "wasi")]
           wasi_params: self.wasi_params.clone(),
+          resource_limits: self.resource_limits,
         };
 
         tokio::runtime::Handle::current().block_on(async {
@@ -220,6 +234,7 @@ impl Clone for WasmtimeEngineProviderAsync {
         store,
         #[cfg(feature = "wasi")]
         wasi_params: self.wasi_params.clone(),
+        resource_limits: self.resource_limits,
       },
     }
   }
@@ -233,11 +248,12 @@ impl WebAssemblyEngineProviderAsync for WasmtimeEngineProviderAsync {
   ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // create the proper store, now we have a value for `host`
     #[cfg(feature = "wasi")]
-    let wapc_store = WapcStoreAsync::new(&self.wasi_params, Some(host.clone()))?;
+    let wapc_store = WapcStoreAsync::new(&self.wasi_params, Some(host.clone()), self.resource_limits)?;
     #[cfg(not(feature = "wasi"))]
-    let wapc_store = WapcStoreAsync::new(Some(host.clone()));
+    let wapc_store = WapcStoreAsync::new(Some(host.clone()), self.resource_limits);
 
     self.store = Store::new(&self.engine, wapc_store);
+    self.store.limiter(|s| &mut s.limits);
 
     let instance = self.instance_pre.instantiate_async(&mut self.store).await?;
 

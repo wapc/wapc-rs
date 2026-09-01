@@ -1,5 +1,5 @@
 use crate::errors::{Error, Result};
-use crate::{EpochDeadlines, WasmtimeEngineProvider, WasmtimeEngineProviderPre};
+use crate::{EpochDeadlines, ResourceLimits, WasmtimeEngineProvider, WasmtimeEngineProviderPre};
 #[cfg(feature = "async")]
 use crate::{WasmtimeEngineProviderAsync, WasmtimeEngineProviderAsyncPre};
 
@@ -17,6 +17,7 @@ pub struct WasmtimeEngineProviderBuilder<'a> {
   #[cfg(feature = "wasi")]
   wasi_params: Option<wapc::WasiParams>,
   epoch_deadlines: Option<EpochDeadlines>,
+  resource_limits: Option<ResourceLimits>,
 }
 
 #[allow(deprecated)]
@@ -93,6 +94,19 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
     self
   }
 
+  /// Enable enforcement of resource limits on the instantiated WebAssembly
+  /// module, leveraging wasmtime's [`ResourceLimiter`](wasmtime::ResourceLimiter)
+  /// facility.
+  ///
+  /// This can be used to prevent a malicious, or misbehaving, WebAssembly
+  /// module from exhausting the host's memory. See [`ResourceLimits`] for
+  /// details.
+  #[must_use]
+  pub fn enable_resource_limits(mut self, resource_limits: ResourceLimits) -> Self {
+    self.resource_limits = Some(resource_limits);
+    self
+  }
+
   /// Create a [`WasmtimeEngineProviderPre`] instance. This instance can then
   /// be reused as many time as wanted to quickly instantiate a [`WasmtimeEngineProvider`]
   /// by using the [`WasmtimeEngineProviderPre::rehydrate`] method.
@@ -123,9 +137,9 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
         // See https://docs.rs/wasmtime/latest/wasmtime/struct.Engine.html#engines-and-clone
         cfg_if::cfg_if! {
             if #[cfg(feature = "wasi")] {
-                WasmtimeEngineProviderPre::new(e.clone(), module, self.wasi_params.clone())
+                WasmtimeEngineProviderPre::new(e.clone(), module, self.wasi_params.clone(), self.resource_limits)
             } else {
-                WasmtimeEngineProviderPre::new(e.clone(), module)
+                WasmtimeEngineProviderPre::new(e.clone(), module, self.resource_limits)
             }
         }
       }
@@ -167,9 +181,9 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
 
         cfg_if::cfg_if! {
             if #[cfg(feature = "wasi")] {
-                WasmtimeEngineProviderPre::new(engine, module, self.wasi_params.clone())
+                WasmtimeEngineProviderPre::new(engine, module, self.wasi_params.clone(), self.resource_limits)
             } else {
-                WasmtimeEngineProviderPre::new(engine, module)
+                WasmtimeEngineProviderPre::new(engine, module, self.resource_limits)
 
             }
         }
@@ -220,9 +234,9 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
         // See https://docs.rs/wasmtime/latest/wasmtime/struct.Engine.html#engines-and-clone
         cfg_if::cfg_if! {
             if #[cfg(feature = "wasi")] {
-                WasmtimeEngineProviderAsyncPre::new(e.clone(), module, self.wasi_params.clone(), self.epoch_deadlines)
+                WasmtimeEngineProviderAsyncPre::new(e.clone(), module, self.wasi_params.clone(), self.epoch_deadlines, self.resource_limits)
             } else {
-                WasmtimeEngineProviderAsyncPre::new(e.clone(), module, self.epoch_deadlines)
+                WasmtimeEngineProviderAsyncPre::new(e.clone(), module, self.epoch_deadlines, self.resource_limits)
             }
         }
       }
@@ -266,9 +280,9 @@ impl<'a> WasmtimeEngineProviderBuilder<'a> {
 
         cfg_if::cfg_if! {
             if #[cfg(feature = "wasi")] {
-                WasmtimeEngineProviderAsyncPre::new(engine, module, self.wasi_params.clone(), self.epoch_deadlines)
+                WasmtimeEngineProviderAsyncPre::new(engine, module, self.wasi_params.clone(), self.epoch_deadlines, self.resource_limits)
             } else {
-                WasmtimeEngineProviderAsyncPre::new(engine, module, self.epoch_deadlines)
+                WasmtimeEngineProviderAsyncPre::new(engine, module, self.epoch_deadlines, self.resource_limits)
             }
         }
       }
