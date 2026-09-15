@@ -21,7 +21,7 @@ status = "actively-developed"
 wapc = { path = "../wapc", version = "2.0.0" }
 log = "0.4"
 thiserror = "2.0"
-rusty_pool = "0.7"
+rusty_pool = "1.0"
 crossbeam = "0.8"
 tokio = { version = "1", features = ["sync"] }
 
