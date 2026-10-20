@@ -51,7 +51,6 @@
   missing_copy_implementations,
   missing_debug_implementations,
   mutable_transmutes,
-  no_mangle_generic_items,
   non_shorthand_field_patterns,
   overflowing_literals,
   path_statements,
