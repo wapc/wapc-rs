@@ -29,7 +29,7 @@ independent = true
 
 [dependencies]
 log = "0.4"
-parking_lot = "0.12"
+parking_lot = "0.13"
 thiserror = "2.0"
 async-trait = { version = "0.1", optional = true }
 tokio = { version = "1", optional = true, default-features = false, features = [
